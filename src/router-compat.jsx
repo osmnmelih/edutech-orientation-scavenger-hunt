@@ -10,7 +10,18 @@ export function useNavigate() {
     }
 
     if (typeof to === 'string') {
-      return navigate({ to, replace: Boolean(options?.replace) });
+      try {
+        return navigate({ to, replace: Boolean(options?.replace) });
+      } catch (e) {
+        if (typeof window !== 'undefined') {
+          if (options?.replace) {
+            window.location.replace(to);
+          } else {
+            window.location.href = to;
+          }
+        }
+        return undefined;
+      }
     }
 
     return navigate(to);

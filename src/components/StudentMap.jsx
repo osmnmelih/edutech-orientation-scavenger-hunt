@@ -1,88 +1,94 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MARKER_COLOR, UNLOCK_DISTANCE } from '../utils.js';
+import { UNLOCK_DISTANCE } from '../utils.js';
 
+// Animated Pulse Marker for User Location
 const userIcon = L.divIcon({
   className: '',
-  iconSize: [20, 20], iconAnchor: [10, 10],
-  html: `<div class="user-dot"></div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+  html: `<div style="position:relative;width:28px;height:28px;">
+    <div style="position:absolute;inset:0;border-radius:50%;background:#B14EFF;opacity:0.4;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+    <div style="position:absolute;inset:4px;border-radius:50%;background:#B14EFF;border:2.5px solid #FFFFFF;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>
+  </div>`,
 });
 
 const iconCache = {};
 
-function createCpIcon(orderNum, taskType, status, cp) {
-  const cacheKey = `${orderNum}_${taskType}_${status}_${cp.difficulty}`;
-  if (iconCache[cacheKey]) {
-    return iconCache[cacheKey];
-  }
+function createCpIcon(orderNum, label, status) {
+  const cacheKey = `${orderNum}_${label}_${status}`;
+  if (iconCache[cacheKey]) return iconCache[cacheKey];
 
-  // GOTG cyberpunk status colors
   const color =
-    status === 'completed' ? '#00FF88' : // GotG Electric Green
-    status === 'current'   ? '#FFC800' : // GotG Gold
-    cp.difficulty === 'hard' ? '#FF0055' : // GotG Volt Magenta
-    '#8A2BE2'; // GotG Active Purple
+    status === 'completed' ? '#00FF88' :
+    status === 'current'   ? '#FFC800' :
+    '#B14EFF';
 
-  const glow = status === 'future'
-    ? 'drop-shadow(0 0 3px rgba(138,43,226,0.4))'
-    : `drop-shadow(0 0 10px ${color})`;
-
-  const opacity = status === 'future' ? 0.65 : 1;
+  const glow = 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))';
+  const opacity = status === 'future' ? 0.85 : 1;
+  const shortName = label ? label.split('(')[0].trim() : `Station ${orderNum}`;
 
   const icon = L.divIcon({
     className: '',
-    iconSize: [42, 50], iconAnchor: [21, 50],
-    html: `<div style="opacity:${opacity};width:42px;height:50px;">
-      <svg viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg"
-           style="width:100%;height:100%;filter:${glow}">
+    iconSize: [120, 68],
+    iconAnchor: [60, 68],
+    html: `<div style="opacity:${opacity};width:120px;height:68px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">
+      <!-- Floating Label Badge -->
+      <div style="background:rgba(10,3,20,0.92);border:1px solid ${color};color:#FFFFFF;padding:2px 8px;border-radius:6px;font-family:Orbitron,monospace;font-size:9px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);margin-bottom:4px;">
+        ${shortName}
+      </div>
+
+      <!-- Station SVG Pin -->
+      <svg viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg" style="width:36px;height:44px;filter:${glow}">
         <path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26S36 31.5 36 18C36 8.06 27.94 0 18 0z"
-          fill="${color}" stroke="#0A0314" stroke-width="2"/>
-        <text x="18" y="22" text-anchor="middle" font-size="11" font-weight="900"
-          font-family="Orbitron,Arial,sans-serif" fill="#0A0314">
-          ${status === 'completed' ? '✔' : orderNum}
+          fill="${color}" stroke="#06060F" stroke-width="2.5"/>
+        <text x="18" y="22" text-anchor="middle" font-size="13" font-weight="900"
+          font-family="Orbitron,sans-serif" fill="#06060F">
+          ${status === 'completed' ? '✓' : orderNum}
         </text>
-      </svg></div>`,
+      </svg>
+    </div>`,
   });
 
   iconCache[cacheKey] = icon;
   return icon;
 }
 
-function AutoCenter({ userPos, currentCp }) {
-  const map  = useMap();
-  const prev = useRef(null);
+function AutoCenter({ userPos, currentCp, focusTrigger }) {
+  const map = useMap();
+  const prevKey = useRef(null);
 
   useEffect(() => {
     if (!userPos && !currentCp) return;
 
-    const key = userPos
+    const key = focusTrigger
+      ? `${focusTrigger}_${Date.now()}`
+      : userPos
       ? `${userPos.lat.toFixed(4)},${userPos.lng.toFixed(4)}`
-      : String(currentCp?.id);
+      : `${currentCp?.id}`;
 
-    if (key !== prev.current) {
-      prev.current = key;
-      if (userPos) {
-        // Only recenter if map center is far from new userPos (approx > 8 meters)
-        const currentCenter = map.getCenter();
-        const diffLat = Math.abs(currentCenter.lat - userPos.lat);
-        const diffLng = Math.abs(currentCenter.lng - userPos.lng);
-        if (diffLat > 0.000075 || diffLng > 0.000075) {
-          map.setView([userPos.lat, userPos.lng], map.getZoom(), { animate: true });
-        }
+    if (key !== prevKey.current) {
+      prevKey.current = key;
+      if (focusTrigger === 'user' && userPos) {
+        map.flyTo([userPos.lat, userPos.lng], 17, { duration: 1.2 });
+      } else if (focusTrigger === 'target' && currentCp) {
+        map.flyTo([currentCp.lat, currentCp.lng], 17.5, { duration: 1.2 });
+      } else if (userPos) {
+        map.flyTo([userPos.lat, userPos.lng], Math.max(16.5, map.getZoom()), { duration: 1 });
       } else if (currentCp) {
-        map.setView([currentCp.lat, currentCp.lng], 16, { animate: true });
+        map.flyTo([currentCp.lat, currentCp.lng], 17, { duration: 1 });
       }
     }
-  }, [userPos, currentCp, map]);
+  }, [userPos, currentCp, focusTrigger, map]);
 
   return null;
 }
 
-export default function StudentMap({ userPos, checkpoints, currentCp }) {
+export default function StudentMap({ userPos, checkpoints, currentCp, focusTrigger }) {
   const centre = userPos
     ? [userPos.lat, userPos.lng]
-    : currentCp ? [currentCp.lat, currentCp.lng] : [40.7851, -73.9683];
+    : currentCp ? [currentCp.lat, currentCp.lng] : [49.2543, 7.0456];
 
   const cpIndex = checkpoints.findIndex(cp => cp.id === currentCp?.id);
 
@@ -93,46 +99,68 @@ export default function StudentMap({ userPos, checkpoints, currentCp }) {
   }
 
   return (
-    <MapContainer center={centre} zoom={16} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-      {/* Dark Matter cyberpunk space map layer */}
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        subdomains="abcd"
-        maxZoom={20}
-      />
+    <div className="relative h-full w-full">
+      <MapContainer
+        center={centre}
+        zoom={17}
+        style={{ height: '100%', width: '100%', background: '#0A0314' }}
+        zoomControl={false}
+      >
+        {/* OpenStreetMap Standard Free Tile Layer (Dark theme via CSS filter in styles.css) */}
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={19}
+        />
 
-      <AutoCenter userPos={userPos} currentCp={currentCp} />
+        <AutoCenter userPos={userPos} currentCp={currentCp} focusTrigger={focusTrigger} />
 
-      {/* User location */}
-      {userPos && (
-        <>
-          <Marker position={[userPos.lat, userPos.lng]} icon={userIcon} />
-          <Circle
-            center={[userPos.lat, userPos.lng]}
-            radius={UNLOCK_DISTANCE}
-            pathOptions={{ color: '#00FFD2', fillColor: '#00FFD2', fillOpacity: 0.05, weight: 1, dashArray: '4 4' }}
+        {/* Animated Walking Route Line from User to Current Station */}
+        {userPos && currentCp && (
+          <Polyline
+            positions={[
+              [userPos.lat, userPos.lng],
+              [currentCp.lat, currentCp.lng],
+            ]}
+            pathOptions={{
+              color: '#B14EFF',
+              weight: 3,
+              dashArray: '6, 6',
+              opacity: 0.8,
+            }}
           />
-        </>
-      )}
+        )}
 
-      {/* Checkpoints */}
-      {checkpoints.map((cp, i) => (
-        <Marker
-          key={cp.id}
-          position={[cp.lat, cp.lng]}
-          icon={createCpIcon(cp.order_num, cp.task_type, getStatus(cp, i), cp)}
-        />
-      ))}
+        {/* User live position marker */}
+        {userPos && (
+          <>
+            <Marker position={[userPos.lat, userPos.lng]} icon={userIcon} />
+            <Circle
+              center={[userPos.lat, userPos.lng]}
+              radius={UNLOCK_DISTANCE}
+              pathOptions={{ color: '#B14EFF', fillColor: '#B14EFF', fillOpacity: 0.12, weight: 1.5, dashArray: '4 4' }}
+            />
+          </>
+        )}
 
-      {/* Unlock radius around current target */}
-      {currentCp && (
-        <Circle
-          center={[currentCp.lat, currentCp.lng]}
-          radius={UNLOCK_DISTANCE}
-          pathOptions={{ color: '#00FF88', fillColor: '#00FF88', fillOpacity: 0.08, weight: 1.5, dashArray: '6 4' }}
-        />
-      )}
-    </MapContainer>
+        {/* Campus Checkpoint Station Markers */}
+        {checkpoints.map((cp, i) => (
+          <Marker
+            key={cp.id}
+            position={[cp.lat, cp.lng]}
+            icon={createCpIcon(cp.order_num || i + 1, cp.label, getStatus(cp, i))}
+          />
+        ))}
+
+        {/* Radius indicator around current target checkpoint */}
+        {currentCp && (
+          <Circle
+            center={[currentCp.lat, currentCp.lng]}
+            radius={UNLOCK_DISTANCE}
+            pathOptions={{ color: '#FFC800', fillColor: '#FFC800', fillOpacity: 0.15, weight: 2, dashArray: '6 4' }}
+          />
+        )}
+      </MapContainer>
+    </div>
   );
 }

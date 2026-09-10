@@ -3,7 +3,7 @@ import { ClientOnly } from "@tanstack/react-router";
 import GameApp from "@/GameApp.jsx";
 
 // Catch-all client route: every non-/api path renders the SPA so React Router
-// inside GameApp can dispatch /teacher, /student, /teacher/session/:id, etc.
+// inside GameApp can dispatch /admin, /student, /admin/session/:id, etc.
 export const Route = createFileRoute("/$")({
   ssr: false,
   component: () => (

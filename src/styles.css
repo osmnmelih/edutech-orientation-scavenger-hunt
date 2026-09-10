@@ -142,44 +142,39 @@ html, body, #root {
 
 @layer components {
 
-  /* ── Cockpit chamfered panel (GotG diegetic frame) ── */
+  /* ── Cockpit glassmorphism panel ── */
   .cockpit-panel {
-    background: linear-gradient(135deg, rgba(30,10,60,0.92) 0%, rgba(58,20,112,0.85) 100%);
-    border: 1px solid var(--ag-violet);
-    border-radius: 0;
+    background: linear-gradient(135deg, rgba(20, 8, 42, 0.94) 0%, rgba(42, 14, 84, 0.90) 50%, rgba(14, 5, 32, 0.96) 100%);
+    border: 1px solid rgba(138, 43, 226, 0.35);
+    border-radius: 16px;
     position: relative;
-    clip-path: polygon(
-      14px 0, calc(100% - 14px) 0, 100% 14px,
-      100% calc(100% - 14px), calc(100% - 14px) 100%,
-      14px 100%, 0 calc(100% - 14px), 0 14px
-    );
-    box-shadow: 0 0 24px rgba(138, 43, 226, 0.25);
-    transition: box-shadow 0.25s, border-color 0.25s;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(138, 43, 226, 0.08);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
   }
   .cockpit-panel:hover {
-    box-shadow: 0 0 32px rgba(255, 0, 85, 0.35);
+    border-color: rgba(177, 78, 255, 0.5);
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.7), inset 0 0 16px rgba(177, 78, 255, 0.12);
   }
-
-  /* Rivet decorations removed per design request */
 
   .ag-panel {
-    background: linear-gradient(135deg, rgba(30,10,60,0.9) 0%, rgba(58,20,112,0.75) 100%);
-    border: 1px solid var(--ag-border);
-    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(20, 8, 42, 0.9) 0%, rgba(42, 14, 84, 0.8) 100%);
+    border: 1px solid rgba(138, 43, 226, 0.35);
+    border-radius: 16px;
     position: relative;
     transition: border-color 0.25s, box-shadow 0.25s;
-    box-shadow: 0 0 18px rgba(138, 43, 226, 0.18);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   }
   .ag-panel:hover {
-    border-color: var(--ag-border-strong);
-    box-shadow: 0 0 26px rgba(255, 0, 85, 0.28);
+    border-color: rgba(177, 78, 255, 0.5);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
   }
 
   .hud-panel,
   .cyber-card {
-    background: linear-gradient(135deg, rgba(30,10,60,0.9) 0%, rgba(58,20,112,0.75) 100%);
-    border: 1px solid var(--ag-border);
-    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(20, 8, 42, 0.9) 0%, rgba(42, 14, 84, 0.8) 100%);
+    border: 1px solid rgba(138, 43, 226, 0.35);
+    border-radius: 16px;
     position: relative;
     overflow: hidden;
   }
@@ -212,77 +207,70 @@ html, body, #root {
   .cockpit-led {
     width: 10px; height: 10px;
     border-radius: 50%;
-    background: var(--led-color, var(--ag-cyan));
-    box-shadow: 0 0 8px var(--led-color, var(--ag-cyan)),
+    background: var(--led-color, var(--ag-violet-glow));
+    box-shadow: 0 0 6px var(--led-color, var(--ag-violet-glow)),
                 inset 0 0 4px rgba(0,0,0,0.5);
     animation: neonPulse 2s ease-in-out infinite;
   }
 
   /* ── HUD top-right action cluster ── */
   .cockpit-hud-actions {
-    background: linear-gradient(135deg, rgba(30,10,60,0.95) 0%, rgba(58,20,112,0.9) 100%);
-    border: 1px solid var(--ag-violet);
-    clip-path: polygon(
-      12px 0, 100% 0, 100% calc(100% - 12px),
-      calc(100% - 12px) 100%, 0 100%, 0 12px
-    );
-    box-shadow: 0 0 24px rgba(177, 78, 255, 0.4);
+    background: linear-gradient(135deg, rgba(20, 8, 42, 0.95) 0%, rgba(42, 14, 84, 0.9) 100%);
+    border: 1px solid rgba(138, 43, 226, 0.35);
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     padding: 12px;
   }
 
-  /* ── Cockpit button variant (chamfered violet → magenta hover) ── */
+  /* ── Cockpit button variants ── */
   .cockpit-btn {
-    background: linear-gradient(135deg, rgba(138,43,226,0.85) 0%, rgba(74,26,138,0.95) 100%);
-    color: var(--ag-text);
-    border: 1px solid var(--ag-violet-glow);
-    clip-path: polygon(
-      10px 0, calc(100% - 10px) 0, 100% 10px,
-      100% calc(100% - 10px), calc(100% - 10px) 100%,
-      10px 100%, 0 calc(100% - 10px), 0 10px
-    );
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.4) 0%, rgba(177, 78, 255, 0.5) 100%);
+    color: #FFFFFF;
+    border: 1px solid rgba(177, 78, 255, 0.5);
+    border-radius: 12px;
     font-family: 'Orbitron', sans-serif;
     font-weight: 900;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.25s ease-out;
     cursor: pointer;
-    box-shadow: 0 0 16px rgba(138,43,226,0.45);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
   }
   .cockpit-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, rgba(255,0,85,0.95) 0%, rgba(138,43,226,0.85) 100%);
-    box-shadow: 0 0 28px rgba(255,0,85,0.6);
-    color: var(--ag-gold);
+    background: linear-gradient(135deg, rgba(177, 78, 255, 0.6) 0%, rgba(255, 0, 85, 0.5) 100%);
+    border-color: #FF0055;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    color: #FFFFFF;
+    transform: translateY(-1px);
   }
-  .cockpit-btn:active:not(:disabled) { transform: scale(0.97); }
+  .cockpit-btn:active:not(:disabled) { transform: scale(0.98); }
   .cockpit-btn:focus-visible { outline: 2px solid var(--ag-gold); outline-offset: 3px; }
   .cockpit-btn:disabled {
-    background: repeating-linear-gradient(45deg,
-      rgba(255,0,85,0.15) 0 8px,
-      rgba(30,10,60,0.6) 8px 16px);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
     color: var(--ag-muted);
     cursor: not-allowed;
     box-shadow: none;
   }
 
   .cockpit-btn-secondary {
-    background: transparent;
-    color: var(--ag-magenta);
-    border: 1px solid var(--ag-magenta);
-    clip-path: polygon(
-      10px 0, calc(100% - 10px) 0, 100% 10px,
-      100% calc(100% - 10px), calc(100% - 10px) 100%,
-      10px 100%, 0 calc(100% - 10px), 0 10px
-    );
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--ag-text);
+    border: 1px solid rgba(138, 43, 226, 0.35);
+    border-radius: 12px;
     font-family: 'Orbitron', sans-serif;
     font-weight: 800;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    transition: all 0.2s;
+    transition: all 0.25s ease-out;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
   .cockpit-btn-secondary:hover:not(:disabled) {
-    background: rgba(255,0,85,0.18);
-    box-shadow: 0 0 22px rgba(255,0,85,0.45);
+    background: rgba(138, 43, 226, 0.15);
+    border-color: var(--ag-violet-glow);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
   }
   .cockpit-btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
 
@@ -632,3 +620,17 @@ html, body, #root {
   100% { transform: scale(1.0) translate(0, 0) rotate(0deg); }
 }
 .animate-cosmic-drift { animation: cosmicDrift 75s ease-in-out infinite; }
+
+/* ── iOS Mobile Safe Area Inset Support ── */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-pt {
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+}
+.safe-area-pb {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}

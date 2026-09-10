@@ -121,7 +121,7 @@ export default function TaskCard({ task, cpIndex = 0, selectedOptionId = null, o
             </span>
             {task.duration_seconds && (
               <span className="text-xs font-mono-cyber text-ag-cyan font-bold bg-ag-cyan/10 px-2.5 py-1 rounded border border-ag-cyan/30">
-                ⏱️ {task.duration_seconds}s
+                {task.duration_seconds}s
               </span>
             )}
           </div>
@@ -139,7 +139,6 @@ export default function TaskCard({ task, cpIndex = 0, selectedOptionId = null, o
             <div className="space-y-3.5">
               {task.sdt_mechanics?.relatedness_rules && (
                 <div className="border border-ag-purple/25 bg-ag-purple/5 rounded-xl p-4 text-xs font-mono-cyber flex items-start gap-2.5">
-                  <span className="text-ag-purple text-base">👥</span>
                   <div>
                     <span className="text-ag-purple font-bold uppercase text-[9px] tracking-wider block mb-1">TEAM SYNC RULE</span>
                     <p className="text-ag-text/95 leading-relaxed text-xs sm:text-sm">{task.sdt_mechanics.relatedness_rules}</p>
@@ -149,7 +148,6 @@ export default function TaskCard({ task, cpIndex = 0, selectedOptionId = null, o
 
               {task.sdt_mechanics?.competence_tip && (
                 <div className="border border-ag-green/25 bg-ag-green/5 rounded-xl p-4 text-xs font-mono-cyber flex items-start gap-2.5">
-                  <span className="text-ag-green text-base">⚡</span>
                   <div>
                     <span className="text-ag-green font-bold uppercase text-[9px] tracking-wider block mb-1">PERFORMANCE TIP</span>
                     <p className="text-ag-text/95 leading-relaxed text-xs sm:text-sm">{task.sdt_mechanics.competence_tip}</p>

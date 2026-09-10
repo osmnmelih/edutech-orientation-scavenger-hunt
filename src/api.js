@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+const api = axios.create({ baseURL: '/api', timeout: 1500 });
 
 export const sessions = {
   create:    (name)              => api.post('/sessions', { name }),

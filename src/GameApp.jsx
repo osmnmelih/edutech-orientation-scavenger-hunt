@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 
 const Home = lazy(() => import('./pages/Home.jsx'));
-const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard.jsx'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'));
 const SessionMonitor = lazy(() => import('./pages/SessionMonitor.jsx'));
 const StudentView = lazy(() => import('./pages/StudentView.jsx'));
 const Presentation = lazy(() => import('./pages/Presentation.jsx'));
@@ -29,13 +29,13 @@ export default function App() {
   const navigate = useNavigate();
   let Page = Home;
 
-  if (pathname === '/teacher') Page = TeacherDashboard;
-  else if (pathname.startsWith('/teacher/session/')) Page = SessionMonitor;
+  if (pathname === '/admin' || pathname === '/teacher') Page = AdminDashboard;
+  else if (pathname.startsWith('/admin/session/') || pathname.startsWith('/teacher/session/')) Page = SessionMonitor;
   else if (pathname === '/student') Page = StudentView;
   else if (pathname === '/presentation') Page = Presentation;
 
   useEffect(() => {
-    if (!['/', '/teacher', '/student', '/presentation'].includes(pathname) && !pathname.startsWith('/teacher/session/')) {
+    if (!['/', '/admin', '/teacher', '/student', '/presentation'].includes(pathname) && !pathname.startsWith('/admin/session/') && !pathname.startsWith('/teacher/session/')) {
       navigate({ to: '/', replace: true });
     }
   }, [navigate, pathname]);

@@ -32,8 +32,15 @@ function removeSessionFromHistory(id) {
   } catch { /* ignore */ }
 }
 
-export default function TeacherDashboard() {
+export default function AdminDashboard() {
   const navigate = useNavigate();
+
+  const [isAdminAuth, setIsAdminAuth] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('edutech_admin_authenticated') === 'true';
+  });
+  const [adminPasscode, setAdminPasscode] = useState('');
+  const [adminPasscodeError, setAdminPasscodeError] = useState('');
 
   const [step, setStep]               = useState(0);
   const [sessionName, setSessionName] = useState('');
@@ -53,6 +60,23 @@ export default function TeacherDashboard() {
 
   useEffect(() => { setSavedSessions(loadSavedSessions()); }, []);
 
+  const handleAdminLogin = (e) => {
+    e.preventDefault();
+    if (adminPasscode.trim() === 'tya00') {
+      sessionStorage.setItem('edutech_admin_authenticated', 'true');
+      setIsAdminAuth(true);
+      setAdminPasscodeError('');
+    } else {
+      setAdminPasscodeError('INVALID ADMIN PASSCODE');
+      setAdminPasscode('');
+    }
+  };
+
+  const handleAdminLogout = () => {
+    sessionStorage.removeItem('edutech_admin_authenticated');
+    setIsAdminAuth(false);
+  };
+
   function handleUseMyLocation() {
     if (!navigator.geolocation) { setGpsError('GPS not supported'); return; }
     setGpsLoading(true); setGpsError('');
@@ -62,33 +86,32 @@ export default function TeacherDashboard() {
     );
   }
 
-  async function handleCreateSession(e) {
-    e.preventDefault();
-    if (!sessionName.trim()) return;
+  async function handleConnectLobby() {
     setLoading(true); setError('');
+    const orientationName = '2026-2027 Winter Semester MSc Educational Technology Orientation';
     try {
-      const { data } = await sessions.create(sessionName.trim());
-      saveSessionToHistory(data);
+      let sessionData = null;
+      try {
+        const fetchPromise = sessions.getByCode('EDUTECH26');
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Fast local fallback')), 500));
+        const { data } = await Promise.race([fetchPromise, timeoutPromise]);
+        sessionData = data;
+      } catch (err) {
+        sessionData = {
+          id: `edutech_host_${Date.now()}`,
+          name: orientationName,
+          join_code: 'EDUTECH26'
+        };
+      }
+      saveSessionToHistory(sessionData);
       setSavedSessions(loadSavedSessions());
-      setSession(data);
-      setStep(1);
+      setSession(sessionData);
+      navigate(`/admin/session/${sessionData.id}`);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create session');
-    } finally { setLoading(false); }
-  }
-
-  async function handleRejoin(e) {
-    e.preventDefault();
-    if (!rejoinCode.trim()) return;
-    setRejoining(true); setRejoinError('');
-    try {
-      const { data } = await sessions.getByCode(rejoinCode.trim());
-      saveSessionToHistory(data);
-      setSavedSessions(loadSavedSessions());
-      navigate(`/teacher/session/${data.id}`);
-    } catch (err) {
-      setRejoinError(err.response?.status === 404 ? 'No session found.' : (err.response?.data?.error || 'Could not rejoin'));
-    } finally { setRejoining(false); }
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleRejoinSaved(saved) {
@@ -96,7 +119,7 @@ export default function TeacherDashboard() {
       const { data } = await sessions.getById(saved.id);
       saveSessionToHistory(data);
       setSavedSessions(loadSavedSessions());
-      navigate(`/teacher/session/${data.id}`);
+      navigate(`/admin/session/${data.id}`);
     } catch {
       removeSessionFromHistory(saved.id);
       setSavedSessions(loadSavedSessions());
@@ -140,16 +163,70 @@ export default function TeacherDashboard() {
     catch { return ''; }
   }
 
+  if (!isAdminAuth) {
+    return (
+      <CockpitFrame rail={[]} actions={null} title={null}>
+        <div className="min-h-screen bg-ag-bg flex items-center justify-center p-6 select-none font-orbitron">
+          <div className="cockpit-panel p-8 sm:p-10 max-w-md w-full border-2 border-ag-gold/40 space-y-6 text-center shadow-[0_0_35px_rgba(255,200,0,0.15)] relative">
+            <div className="w-12 h-12 rounded-full border-2 border-ag-gold bg-ag-gold/10 flex items-center justify-center mx-auto text-ag-gold font-black text-xl">
+              🔐
+            </div>
+            <div className="space-y-1.5">
+              <h2 className="font-orbitron font-black text-lg text-ag-gold uppercase tracking-[0.2em]">
+                ADMIN CONTROL ACCESS
+              </h2>
+              <p className="font-mono-cyber text-[11px] text-ag-muted uppercase">
+                ENTER SECRET ADMIN PASSCODE
+              </p>
+            </div>
+
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <input
+                type="password"
+                placeholder="PASSCODE"
+                value={adminPasscode}
+                onChange={e => { setAdminPasscode(e.target.value); setAdminPasscodeError(''); }}
+                className="cyber-input w-full h-12 text-center text-sm font-mono-cyber uppercase tracking-[0.3em]"
+                autoFocus
+                required
+              />
+
+              {adminPasscodeError && (
+                <div className="text-ag-red text-xs font-mono-cyber font-bold animate-pulse">
+                  {adminPasscodeError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="cockpit-btn w-full py-3.5 text-xs tracking-[0.25em] font-black border-ag-gold text-ag-gold bg-ag-gold/15 hover:bg-ag-gold/25"
+              >
+                UNLOCK ADMIN DASHBOARD ➔
+              </button>
+            </form>
+
+            <button
+              onClick={() => navigate('/')}
+              className="cockpit-btn-secondary w-full py-3.5 text-xs tracking-[0.2em] font-orbitron font-bold border border-ag-cyan/40 bg-ag-cyan/10 hover:bg-ag-cyan/20 text-ag-cyan rounded-xl transition-all shadow-md uppercase block"
+            >
+              ← RETURN TO STUDENT HOME
+            </button>
+          </div>
+        </div>
+      </CockpitFrame>
+    );
+  }
+
   return (
     <CockpitFrame rail={[]} actions={null} title={null}>
     <div className="cockpit-grid relative">
       <div className="scanlines opacity-20" />
 
-      {/* ── Game Host title ── */}
+      {/* ── Admin Dashboard title ── */}
       <div className="px-6 pt-6 pb-2 relative z-10 flex flex-col items-center gap-3">
         <div className="cockpit-panel px-8 py-3">
           <h1 className="font-orbitron text-xl md:text-2xl font-black text-ag-gold tracking-[0.3em] uppercase text-center">
-            Game Host
+            Admin Dashboard
           </h1>
         </div>
         {session && (
@@ -159,76 +236,36 @@ export default function TeacherDashboard() {
         )}
       </div>
 
-
-
       {error && (
         <div className="mx-5 mt-3 bg-ag-red/10 border border-ag-red/40 text-ag-red text-sm px-4 py-2 rounded-xl relative z-10">
           {error}
         </div>
       )}
 
-      {/* ══ Step 0: Create / Rejoin ══ */}
+      {/* ══ Step 0: Auto-Configured Connect Lobby Card ══ */}
       {step === 0 && (
-        <div className="max-w-4xl mx-auto p-6 mt-10 relative z-10 space-y-6">
-          <div className="grid md:grid-cols-2 gap-8">
+        <div className="max-w-2xl mx-auto p-6 mt-6 relative z-10">
+          <div className="ag-panel p-8 sm:p-10 space-y-6 text-center border-2 border-ag-gold/40 shadow-[0_0_30px_rgba(255,200,0,0.2)]">
+            <div className="space-y-3 pt-2">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-ag-gold/15 border border-ag-gold/40 text-ag-gold font-orbitron font-black text-xs uppercase tracking-widest">
+                EVENT LOBBY PIN: <span className="text-ag-cyan font-bold tracking-[0.25em] text-sm">EDUTECH26</span>
+              </div>
 
-            {/* Create */}
-            <div className="ag-panel p-10 space-y-6">
-              <div className="w-14 h-14 rounded-2xl border-2 border-ag-cyan/35 bg-ag-cyan/5 flex items-center justify-center text-ag-cyan">
-                <svg width="24" height="24" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="11" y1="3" x2="11" y2="19"/><line x1="3" y1="11" x2="19" y2="11"/>
-                </svg>
-              </div>
-              <div>
-                <h2 className="font-orbitron text-xl font-black text-ag-cyan tracking-wider uppercase">Create Lobby</h2>
-                <p className="text-ag-muted text-xs mt-1 uppercase font-mono-cyber">Set up a new mission session</p>
-              </div>
-              <form onSubmit={handleCreateSession} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="MISSION NAME..."
-                  value={sessionName}
-                  onChange={e => setSessionName(e.target.value)}
-                  className="cyber-input w-full h-16 text-base uppercase tracking-wider font-mono-cyber"
-                  autoFocus
-                />
-                <button type="submit" disabled={!sessionName.trim() || loading}
-                  className="cockpit-btn-secondary w-full px-8 py-5 text-sm tracking-[0.25em]">
-                  {loading ? 'CREATING LOBBY...' : 'CREATE LOBBY ➔'}
-                </button>
-              </form>
+              <h2 className="font-orbitron font-black text-xl sm:text-2xl text-ag-yellow uppercase tracking-wider leading-tight pt-2">
+                2026-2027 Winter Semester<br />MSc Educational Technology Orientation
+              </h2>
             </div>
 
-            {/* Rejoin */}
-            <div className="ag-panel p-10 space-y-6">
-              <div className="w-14 h-14 rounded-2xl border-2 border-ag-border bg-ag-elevated flex items-center justify-center text-ag-muted">
-                <svg width="24" height="24" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 11 A7 7 0 1 1 11 18"/><polyline points="4,7 4,11 8,11"/>
-                </svg>
-              </div>
-              <div>
-                <h2 className="font-orbitron text-xl font-black text-ag-text tracking-wider uppercase">Reconnect</h2>
-                <p className="text-ag-muted text-xs mt-1 uppercase font-mono-cyber">Resume a previous session</p>
-              </div>
-              <form onSubmit={handleRejoin} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="ENTER PIN..."
-                  value={rejoinCode}
-                  onChange={e => setRejoinCode(e.target.value.toUpperCase())}
-                  className="cyber-input w-full h-16 text-base font-mono-cyber tracking-[0.2em] text-ag-cyan text-center uppercase"
-                  maxLength={8}
-                />
-                {rejoinError && <p className="text-ag-red text-xs font-mono-cyber mt-1">{rejoinError}</p>}
-                <button type="submit" disabled={!rejoinCode.trim() || rejoining}
-                  className="cockpit-btn-secondary w-full px-8 py-5 text-sm tracking-[0.25em]">
-                  {rejoining ? 'CONNECTING...' : 'RECONNECT ➔'}
-                </button>
-              </form>
+            <div className="pt-4 space-y-3">
+              <button
+                onClick={handleConnectLobby}
+                disabled={loading}
+                className="cockpit-btn w-full py-5 text-sm sm:text-base tracking-[0.3em] font-black shadow-[0_0_25px_rgba(0,255,136,0.35)] bg-gradient-to-r from-ag-green/20 via-ag-cyan/30 to-ag-green/20 border-ag-green text-ag-green"
+              >
+                {loading ? 'CONNECTING LOBBY...' : 'CONNECT LOBBY ➔'}
+              </button>
             </div>
           </div>
-
-
         </div>
       )}
 
@@ -333,7 +370,7 @@ export default function TeacherDashboard() {
             </div>
 
             <div className="flex flex-col gap-3 mt-6">
-              <button onClick={() => navigate(`/teacher/session/${session.id}`)}
+              <button onClick={() => navigate(`/admin/session/${session.id}`)}
                 className="cockpit-btn-secondary w-full px-8 py-5 text-sm tracking-[0.25em]">
                 LAUNCH MISSION 🚀
               </button>
@@ -345,13 +382,13 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-      {/* ── Bottom: back to role selection ── */}
+      {/* ── Bottom: Return to Student Home ── */}
       <div className="relative z-10 px-6 py-6 flex justify-center">
         <button
-          onClick={() => { window.location.href = '/#role'; }}
-          className="cockpit-btn-secondary w-full max-w-md px-8 py-5 text-sm tracking-[0.25em]"
+          onClick={() => navigate('/')}
+          className="cockpit-btn-secondary w-full max-w-md px-8 py-4 text-xs sm:text-sm tracking-[0.25em] font-orbitron font-bold uppercase rounded-xl border border-ag-cyan/40 bg-ag-cyan/10 hover:bg-ag-cyan/20 text-ag-cyan transition-all shadow-lg"
         >
-          ← BACK TO ROLE SELECTION
+          ← RETURN TO STUDENT HOME
         </button>
       </div>
     </div>

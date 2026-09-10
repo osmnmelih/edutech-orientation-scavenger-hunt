@@ -76,12 +76,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "antigravity 2.0 : scavenger hunt" },
-      { name: "description", content: "antigravity 2.0 : scavenger hunt — Digital PE Scavenger Hunt" },
-      { name: "author", content: "Antigravity" },
-      { property: "og:title", content: "antigravity 2.0 : scavenger hunt" },
-      { property: "og:description", content: "antigravity 2.0 : scavenger hunt — Digital PE Scavenger Hunt" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { title: "EduTech Orientation Scavenger Hunt | Saarland University" },
+      { name: "description", content: "EduTech Orientation Scavenger Hunt — Saarland University MSc Educational Technology Campus Orientation Game" },
+      { name: "author", content: "Saarland University EduTech" },
+      { property: "og:title", content: "EduTech Orientation Scavenger Hunt" },
+      { property: "og:description", content: "Saarland University MSc Educational Technology Campus Orientation Scavenger Hunt Game" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

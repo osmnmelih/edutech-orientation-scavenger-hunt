@@ -9,6 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StudentRouteImport } from './routes/student'
+import { Route as PresentationRouteImport } from './routes/presentation'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiCompleteRouteImport } from './routes/api/complete'
@@ -26,6 +29,21 @@ import { Route as ApiSessionsIdQrRouteImport } from './routes/api/sessions/$id/q
 import { Route as ApiSessionsCodeJoinRouteImport } from './routes/api/sessions/$code/join'
 import { Route as ApiCheckpointsSessionSessionIdRouteImport } from './routes/api/checkpoints/session/$sessionId'
 
+const StudentRoute = StudentRouteImport.update({
+  id: '/student',
+  path: '/student',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PresentationRoute = PresentationRouteImport.update({
+  id: '/presentation',
+  path: '/presentation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
   path: '/$',
@@ -112,6 +130,9 @@ const ApiCheckpointsSessionSessionIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
+  '/presentation': typeof PresentationRoute
+  '/student': typeof StudentRoute
   '/api/complete': typeof ApiCompleteRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
@@ -130,6 +151,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
+  '/presentation': typeof PresentationRoute
+  '/student': typeof StudentRoute
   '/api/complete': typeof ApiCompleteRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
@@ -149,6 +173,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/admin': typeof AdminRoute
+  '/presentation': typeof PresentationRoute
+  '/student': typeof StudentRoute
   '/api/complete': typeof ApiCompleteRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
@@ -169,6 +196,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/admin'
+    | '/presentation'
+    | '/student'
     | '/api/complete'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
@@ -187,6 +217,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/admin'
+    | '/presentation'
+    | '/student'
     | '/api/complete'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
@@ -205,6 +238,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/admin'
+    | '/presentation'
+    | '/student'
     | '/api/complete'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
@@ -224,6 +260,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  AdminRoute: typeof AdminRoute
+  PresentationRoute: typeof PresentationRoute
+  StudentRoute: typeof StudentRoute
   ApiCompleteRoute: typeof ApiCompleteRoute
   ApiCheckpointsIdRoute: typeof ApiCheckpointsIdRoute
   ApiCompletionsTeamIdRoute: typeof ApiCompletionsTeamIdRoute
@@ -241,6 +280,27 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/student': {
+      id: '/student'
+      path: '/student'
+      fullPath: '/student'
+      preLoaderRoute: typeof StudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/presentation': {
+      id: '/presentation'
+      path: '/presentation'
+      fullPath: '/presentation'
+      preLoaderRoute: typeof PresentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$': {
       id: '/$'
       path: '/$'
@@ -371,6 +431,9 @@ const ApiSessionsCodeRouteWithChildren = ApiSessionsCodeRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  AdminRoute: AdminRoute,
+  PresentationRoute: PresentationRoute,
+  StudentRoute: StudentRoute,
   ApiCompleteRoute: ApiCompleteRoute,
   ApiCheckpointsIdRoute: ApiCheckpointsIdRoute,
   ApiCompletionsTeamIdRoute: ApiCompletionsTeamIdRoute,

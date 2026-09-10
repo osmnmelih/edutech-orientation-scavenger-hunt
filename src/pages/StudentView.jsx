@@ -2,18 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from '../router-compat.jsx';
 import { sessions, tasks, hints as hintsApi, completions } from '../api.js';
 import StudentMap from '../components/StudentMap.jsx';
-import TaskCard from '../components/TaskCard.jsx';
 import HintPanel from '../components/HintPanel.jsx';
 import ARView from '../components/ARView.jsx';
+import PhotoUploadTask from '../components/PhotoUploadTask.jsx';
+import StarRewardOverlay from '../components/student/StarRewardOverlay.jsx';
 import RankingsOverlay from '../components/student/RankingsOverlay.jsx';
-import DiscoveryOverlay from '../components/student/DiscoveryOverlay.jsx';
-import RandomEventOverlay from '../components/student/RandomEventOverlay.jsx';
-import ProtocolTimerOverlay from '../components/student/ProtocolTimerOverlay.jsx';
 import FinishedScreen from '../components/student/FinishedScreen.jsx';
 import { useAudioStatus } from '../hooks/useAudioStatus.js';
 import { useGpsWatcher } from '../hooks/useGpsWatcher.js';
-import { useProtocolTimer } from '../hooks/useProtocolTimer.js';
-import { useRandomEvents } from '../hooks/useRandomEvents.js';
 import { haversine, fmtDistance, TASK_META, DIFF_META, UNLOCK_DISTANCE } from '../utils.js';
 import { playClickSound, playUnlockSound, playSuccessSound, playPingSound, startAmbientSpaceMusic, stopAmbientSpaceMusic, startTenseMissionMusic, stopTenseMissionMusic } from '../utils/audio.js';
 
@@ -48,15 +44,13 @@ export default function StudentView() {
   const [joinError, setJoinError]     = useState('');
   const [joining, setJoining]         = useState(false);
 
-  const [savedSession, setSavedSession] = useState(null);
-
   const [phase, setPhase]             = useState(PHASE.JOIN);
   const [team, setTeam]               = useState(null);
   const [session, setSession]         = useState(null);
   const [checkpoints, setCheckpoints] = useState([]);
   const [currentCp, setCurrentCp]     = useState(null);
 
-  const { userPos, gpsError, startGPS, stopGPS } = useGpsWatcher();
+  const { userPos, gpsError, isLocating, locateUser, startGPS, stopGPS } = useGpsWatcher();
   const [distance, setDistance]       = useState(null);
 
   const [task, setTask]               = useState(null);
@@ -78,26 +72,7 @@ export default function StudentView() {
 
   const [showAR, setShowAR] = useState(false);
   const [arInitializing, setArInitializing] = useState(false);
-
-  const [bypassFrequency, setBypassFrequency] = useState(92.4);
-  const [targetFrequency, setTargetFrequency] = useState(95.0);
-  const [bypassUnlocked, setBypassUnlocked]   = useState(false);
-
-  // Discovery animation state
-  const [discoveredNode, setDiscoveredNode] = useState(null);
-  const [showDiscoveryOverlay, setShowDiscoveryOverlay] = useState(false);
-
-  // Random Events and Physical Protocol Timer states
-  const { randomEvent, randomEventTimer, setRandomEvent } = useRandomEvents(phase);
-  const {
-    protocolTimerActive,
-    protocolTimeLeft,
-    setProtocolTimerActive,
-    setProtocolTimeLeft,
-  } = useProtocolTimer(45);
-  const [adaptiveUnlockSecs, setAdaptiveUnlockSecs] = useState(0);
-
-
+  const [focusTrigger, setFocusTrigger] = useState(null);
 
   useEffect(() => {
     const saved = loadStudentSession();
@@ -142,57 +117,47 @@ export default function StudentView() {
     };
   }, []);
 
-
+  // Compute live distance between user position and target checkpoint station & broadcast position
   useEffect(() => {
     if (userPos && currentCp) {
       const dist = haversine(userPos.lat, userPos.lng, currentCp.lat, currentCp.lng);
       setDistance(dist);
 
-      const isClose = dist <= UNLOCK_DISTANCE;
-      if (isClose && currentCp.id !== discoveredNode) {
-        setDiscoveredNode(currentCp.id);
-        setShowDiscoveryOverlay(true);
-        try { playPingSound(); } catch (e) {}
-      }
-    }
-  }, [userPos, currentCp, discoveredNode]);
+      try {
+        const activeStudents = JSON.parse(localStorage.getItem('edutech_active_students') || '[]');
+        const teamId = team?.id;
+        const teamName = team?.team_name || team?.name;
+        const idx = activeStudents.findIndex(s => (teamId && s.id === teamId) || (teamName && s.name === teamName));
+        if (idx >= 0) {
+          activeStudents[idx].lat = userPos.lat;
+          activeStudents[idx].lng = userPos.lng;
+          activeStudents[idx].lastActive = new Date().toISOString();
+          localStorage.setItem('edutech_active_students', JSON.stringify(activeStudents));
+        } else if (teamName) {
+          activeStudents.push({
+            id: teamId || `team_${Date.now()}`,
+            name: teamName,
+            routeOption: 'Option A',
+            currentStation: currentCp?.id || 1,
+            currentLocation: currentCp?.label || 'Station 1',
+            completedCount: 0,
+            stars: 0,
+            lat: userPos.lat,
+            lng: userPos.lng,
+            registeredAt: new Date().toISOString()
+          });
+          localStorage.setItem('edutech_active_students', JSON.stringify(activeStudents));
+        }
 
-  // Adaptive GPS Drift Lock Assist: If on map page, count up to 10s to bypass distance requirement for testing/drift
-  useEffect(() => {
-    if (phase === PHASE.MAP) {
-      const interval = setInterval(() => {
-        setAdaptiveUnlockSecs(prev => {
-          if (prev >= 10) {
-            clearInterval(interval);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    } else {
-      setAdaptiveUnlockSecs(0);
+        try {
+          const bc = new BroadcastChannel('edutech_scavenger_hunt');
+          bc.postMessage({ type: 'LOCATION_UPDATE', teamId, lat: userPos.lat, lng: userPos.lng });
+          bc.close();
+        } catch (e) {}
+        window.dispatchEvent(new CustomEvent('edutech_student_update'));
+      } catch (e) {}
     }
-  }, [phase]);
-
-  useEffect(() => {
-    const isAdaptiveUnlocked = adaptiveUnlockSecs >= 10;
-    const isClose = (distance !== null && distance <= UNLOCK_DISTANCE) || isAdaptiveUnlocked;
-    if (isClose && currentCp && currentCp.id !== discoveredNode) {
-      setDiscoveredNode(currentCp.id);
-      setShowDiscoveryOverlay(true);
-      try { playPingSound(); } catch (e) {}
-    }
-  }, [distance, adaptiveUnlockSecs, currentCp, discoveredNode]);
-
-  useEffect(() => {
-    if (phase === PHASE.SUBMIT && !submitResult) {
-      const randFreq = (Math.floor(Math.random() * 40) + 80);
-      setTargetFrequency(randFreq);
-      setBypassFrequency(randFreq - 4);
-      setBypassUnlocked(false);
-    }
-  }, [phase, submitResult]);
+  }, [userPos, currentCp, team]);
 
   useEffect(() => {
     if (task && task.ui_theme) {
@@ -208,9 +173,6 @@ export default function StudentView() {
       document.documentElement.style.setProperty('--cyber-pink', '#FF0055');
     }
   }, [task]);
-
-  // Random events + protocol timer effects now live in their respective hooks.
-
 
   async function handleJoin(e) {
     e.preventDefault();
@@ -233,7 +195,6 @@ export default function StudentView() {
           checkpoints: cps,
           currentCpId: -1,
         });
-        setSavedSession(null);
         setPhase(PHASE.FINISHED);
       } else {
         const cp = cps.find(c => c.id === data.team.current_checkpoint) || cps[0];
@@ -244,7 +205,6 @@ export default function StudentView() {
           checkpoints: cps,
           currentCpId: cp.id,
         });
-        setSavedSession(null);
         setPhase(PHASE.MAP);
         startGPS();
       }
@@ -273,64 +233,33 @@ export default function StudentView() {
   function handleStartFresh() {
     playClickSound();
     clearStudentSession();
-    setSavedSession(null);
   }
 
   async function openResults() {
-    if (!session?.id) return;
     playClickSound();
     setShowResults(true);
-    if (resultsData) return;
+    if (!session?.id || resultsData) return;
     setResultsLoading(true);
     try {
       const { data } = await sessions.getById(session.id);
-      setResultsData(data);
-    } catch { /* ignore */ }
-    finally { setResultsLoading(false); }
+      if (data) setResultsData(data);
+    } catch (e) {
+      console.warn("Using local orientation scoreboard data:", e);
+    } finally {
+      setResultsLoading(false);
+    }
   }
 
-  const [selectedOptionId, setSelectedOptionId] = useState(null);
-  const [taskStep, setTaskStep] = useState(0);
-  const [timerCompleted, setTimerCompleted] = useState(false);
-
-  useEffect(() => {
-    if (phase === PHASE.TASK && protocolTimeLeft === 0) {
-      setTimerCompleted(true);
-    }
-  }, [protocolTimeLeft, phase]);
-
-  async function handleUnlockTask() {
-    if (!currentCp?.id || !team?.id) return;
+  function handleUnlockTask() {
+    if (!currentCp?.id) return;
     if (!canUnlock) {
-      alert("You are too far from the station! Walk within 20 meters of the station target to start.");
+      alert(`Location Lock Required: Please walk within 20 meters of ${currentCp.label} to start the AR camera task.`);
       return;
     }
-    setTaskLoading(true);
-    setHintsList([]); setHintsUsed(0); setAnswer(''); setSubmitResult(null); setShowHints(false);
-    try {
-      const lat = userPos ? userPos.lat : null;
-      const lng = userPos ? userPos.lng : null;
-      const bypass = isAdaptiveUnlocked;
-      const { data } = await tasks.generate(currentCp.id, team.id, lat, lng, bypass);
-      try { stopAmbientSpaceMusic(); startTenseMissionMusic(); } catch(e) {}
-      playUnlockSound();
-      setTask(data);
-      if (data?.sdt_mechanics?.autonomy_options?.length > 0) {
-        setSelectedOptionId(data.sdt_mechanics.autonomy_options[0].id);
-      } else {
-        setSelectedOptionId(null);
-      }
-      setTaskStep(0);
-      setTimerCompleted(false);
-      setTaskStartTime(Date.now()); 
-      setProtocolTimeLeft(data?.duration_seconds || 45);
-      setPhase(PHASE.TASK);
-    } catch (err) {
-      console.error(err);
-      const msg = err.response?.data?.error || "Failed to start task. Please verify that the session is active.";
-      alert(msg);
-    }
-    finally { setTaskLoading(false); }
+    try { playUnlockSound(); } catch (e) {}
+    setTaskStartTime(Date.now());
+    setArInitializing(true);
+    setShowAR(true);
   }
 
   async function handleRequestHint() {
@@ -347,16 +276,87 @@ export default function StudentView() {
     finally { setHintLoading(false); }
   }
 
-  async function handleComplete() {
+const LOCAL_COMPLETIONS_KEY = 'edutech_orientation_completions';
+function saveCompletionToHistory(entry) {
+  try {
+    const list = JSON.parse(localStorage.getItem(LOCAL_COMPLETIONS_KEY) || '[]');
+    list.unshift(entry);
+    localStorage.setItem(LOCAL_COMPLETIONS_KEY, JSON.stringify(list));
+  } catch (e) {}
+}
+
+  async function handleComplete(submissionData = {}) {
     if (!team?.id || !currentCp?.id) return;
     setSubmitting(true);
     const timeTaken = taskStartTime ? Math.round((Date.now() - taskStartTime) / 1000) : 0;
+
+    const completionEntry = {
+      id: `comp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      sessionId: session?.id || 'edutech_local',
+      teamId: team?.id || 'team_local',
+      teamName: team?.team_name || team?.name || 'STUDENT CREW',
+      checkpointId: currentCp?.id,
+      checkpointLabel: currentCp?.label,
+      checkpointAddress: currentCp?.address,
+      taskType: currentCp?.task_type || 'creative',
+      timeTaken,
+      score: currentCp?.points || 150,
+      answer: submissionData.note || answer || 'Station Verified via AR Camera Photo',
+      photo: submissionData.photo || null,
+      submittedAt: new Date().toISOString(),
+      lat: userPos?.lat || currentCp?.lat,
+      lng: userPos?.lng || currentCp?.lng
+    };
+    saveCompletionToHistory(completionEntry);
+
     try {
-      const { data } = await completions.submit({ teamId: team.id, checkpointId: currentCp.id, timeTaken, answer });
-      setSubmitResult(data);
+      const activeStudents = JSON.parse(localStorage.getItem('edutech_active_students') || '[]');
+      const teamId = team?.id;
+      const teamName = team?.team_name || team?.name;
+      const idx = activeStudents.findIndex(s => (teamId && s.id === teamId) || (teamName && s.name === teamName));
+      if (idx >= 0) {
+        activeStudents[idx].completedCount = Math.max(activeStudents[idx].completedCount || 0, currentCp?.id || 1);
+        activeStudents[idx].stars = activeStudents[idx].completedCount;
+        activeStudents[idx].currentStation = Math.min(3, activeStudents[idx].completedCount + 1);
+        if (currentCp?.label) activeStudents[idx].currentLocation = currentCp.label;
+        if (userPos) { activeStudents[idx].lat = userPos.lat; activeStudents[idx].lng = userPos.lng; }
+        localStorage.setItem('edutech_active_students', JSON.stringify(activeStudents));
+      }
+      try {
+        const bc = new BroadcastChannel('edutech_scavenger_hunt');
+        bc.postMessage({ type: 'TASK_COMPLETED', completion: completionEntry });
+        bc.close();
+      } catch (e) {}
+      window.dispatchEvent(new CustomEvent('edutech_student_update'));
+    } catch (e) {}
+
+    try {
+      let resData = null;
+      try {
+        const { data } = await completions.submit({
+          teamId: team.id,
+          checkpointId: currentCp.id,
+          timeTaken,
+          answer: submissionData.note || answer,
+          photo: submissionData.photo || null
+        });
+        resData = data;
+      } catch (err) {
+        // Fallback for local session / EduTech orientation play
+        const currIdx = checkpoints.findIndex(c => c.id === currentCp.id);
+        const nextCp = checkpoints[currIdx + 1];
+        resData = {
+          success: true,
+          scoreGained: currentCp.points || 150,
+          nextCheckpoint: nextCp ? { id: nextCp.id, label: nextCp.label } : null,
+          finished: !nextCp
+        };
+      }
+
+      setSubmitResult(resData);
       try { stopTenseMissionMusic(); startAmbientSpaceMusic(); } catch(e) {}
       playSuccessSound();
-      if (data.finished) { setPhase(PHASE.FINISHED); stopGPS(); }
+      if (resData.finished) { setPhase(PHASE.FINISHED); stopGPS(); }
       else { setPhase(PHASE.SUBMIT); }
     } catch (err) { console.error(err); }
     finally { setSubmitting(false); }
@@ -368,14 +368,14 @@ export default function StudentView() {
     if (!submitResult?.nextCheckpoint) return;
     const nextCp = checkpoints.find(cp => cp.id === submitResult.nextCheckpoint.id);
     setCurrentCp(nextCp);
+    setFocusTrigger('target');
     const saved = loadStudentSession();
     if (saved && nextCp) saveStudentSession({ ...saved, currentCpId: nextCp.id });
     setTask(null); setPhase(PHASE.MAP);
   }
 
   const cpIndex   = checkpoints.findIndex(cp => cp.id === currentCp?.id);
-  const isAdaptiveUnlocked = adaptiveUnlockSecs >= 10;
-  const canUnlock = (distance !== null && distance <= UNLOCK_DISTANCE) || isAdaptiveUnlocked;
+  const canUnlock = distance !== null && distance <= UNLOCK_DISTANCE;
   let taskType = currentCp?.task_type;
   if (taskType === 'auto' && currentCp) {
     const autoTypes = ['physical', 'cognitive', 'social', 'creative'];
@@ -407,7 +407,11 @@ export default function StudentView() {
         canUnlock={canUnlock}
         taskLoading={taskLoading}
         onClose={() => { setShowAR(false); setArInitializing(false); }}
-        onUnlock={() => { setShowAR(false); setArInitializing(false); handleUnlockTask(); }}
+        onUnlock={(photoPayload) => {
+          setShowAR(false);
+          setArInitializing(false);
+          handleComplete(photoPayload || {});
+        }}
         onCameraReady={() => setArInitializing(false)}
       />
     );
@@ -430,155 +434,155 @@ export default function StudentView() {
 
   // ── MAP ──
   if (phase === PHASE.MAP) {
-    const stabilityPercentage = checkpoints.length > 0 ? Math.round((cpIndex / checkpoints.length) * 100) : 0;
 
     return (
-      <div className="h-screen flex flex-col bg-ag-bg cockpit-curve">
-        <div className="scanlines opacity-15" />
+      <div className="h-[100dvh] w-full flex flex-col bg-ag-bg select-none overflow-hidden">
+        <div className="scanlines opacity-15 pointer-events-none" />
         
         {/* Navigation HUD header */}
-        <div className="px-4 lg:px-6 py-3 lg:py-4 flex items-center justify-center z-10 flex-shrink-0">
-          <div className="cockpit-panel px-5 py-3 flex items-center gap-4 w-full max-w-3xl">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-ag-cyan animate-pulse shadow-[0_0_8px_#00FFD2] shrink-0" />
-              <div className="min-w-0">
-                <div className="font-orbitron font-black text-ag-yellow text-xs lg:text-sm tracking-[0.2em] uppercase truncate">{team.name}</div>
-                <div className="text-[9px] text-ag-muted font-mono-cyber uppercase tracking-widest mt-0.5 hidden sm:block">// TACTICAL NAVIGATION CORE</div>
-              </div>
-            </div>
-            <div className="text-right hidden sm:block shrink-0">
-              <div className="text-[9px] text-ag-muted font-mono-cyber uppercase tracking-wider">SECTORS SECURED</div>
-              <div className="font-orbitron font-black text-ag-cyan text-xs lg:text-base mt-0.5">
-                {stabilityPercentage}% [{cpIndex + 1}/{checkpoints.length}]
-              </div>
-            </div>
-            <button onClick={openResults} className="cockpit-btn-secondary px-4 py-2 text-[10px] tracking-[0.2em] shrink-0">
-              SCOREBOARD
-            </button>
-          </div>
-        </div>
-
-        {/* ── Responsive Map Layout ── */}
-        <div className="flex-1 relative lg:flex lg:flex-row min-h-0 z-10">
-
-          {/* Left panel: Actions and Status */}
-          <div
-            className="absolute bottom-6 inset-x-0 mx-auto w-11/12 max-w-md lg:max-w-none lg:relative lg:bottom-auto lg:inset-x-auto lg:mx-0 lg:w-[40%] lg:min-w-[340px] lg:h-full lg:bg-transparent flex flex-col justify-between p-0 lg:p-6"
-            style={{ zIndex: 1000 }}
+        <header className="px-3 py-2 bg-ag-surface/95 backdrop-blur-md border-b border-ag-border/60 flex items-center justify-between gap-2 z-30 shrink-0 shadow-lg">
+          {/* Scoreboard Button */}
+          <button
+            onClick={openResults}
+            className="cockpit-btn px-3 py-1.5 text-[11px] sm:text-xs tracking-wider font-black shadow-[0_0_12px_rgba(0,243,255,0.25)] flex items-center gap-1 shrink-0"
           >
-            {currentCp && (
-              <div className="cockpit-panel p-4 lg:p-6 space-y-4 lg:space-y-5 flex-1 flex flex-col justify-between">
+            <span>SCOREBOARD</span>
+          </button>
 
-                {/* ── Target + Distance ── */}
-                <div className="space-y-3 lg:space-y-4">
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="min-w-0">
-                      <span className="text-[9px] text-ag-muted font-mono-cyber uppercase block tracking-widest">TARGET STATION</span>
-                      <h3 className="font-orbitron font-black text-base lg:text-lg text-ag-yellow uppercase tracking-wide truncate">
-                        {currentCp.label}
-                      </h3>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-[9px] text-ag-muted font-mono-cyber uppercase block tracking-widest">DISTANCE</span>
-                      <span className={`font-orbitron font-black text-base lg:text-2xl tracking-wider ${canUnlock ? 'text-ag-green' : 'text-ag-yellow'}`}>
-                        {userPos ? fmtDistance(distance) : 'SEARCHING...'}
-                      </span>
-                    </div>
-                  </div>
+          {/* Stars Collected Display */}
+          <div className="flex items-center gap-1.5 font-orbitron font-black text-ag-gold text-xs sm:text-sm tracking-wider shrink-0">
+            <span className="text-[9px] text-ag-gold/80 font-mono-cyber uppercase tracking-widest font-bold hidden xs:inline">STARS</span>
+            <span>⭐ {Math.max(0, cpIndex)} / {checkpoints.length}</span>
+          </div>
 
-                  <div className={`py-3 px-4 rounded-lg border text-[11px] font-mono-cyber uppercase text-center font-bold tracking-wider ${
-                    canUnlock ? 'border-ag-green/40 bg-ag-green/5 text-ag-green animate-pulse' : 'border-ag-yellow/40 bg-ag-yellow/5 text-ag-yellow'
-                  }`}>
-                    {canUnlock ? '[ ✔ STATION REACHED — READY TO START ]' : `[ ⚠ WALK WITHIN ${UNLOCK_DISTANCE}M TO UNLOCK ]`}
-                  </div>
+          {/* Student Name */}
+          {team?.name && (
+            <span className="font-orbitron font-black text-ag-yellow text-xs tracking-wider uppercase truncate max-w-[110px] sm:max-w-[200px] shrink-0 text-right">
+              {team.name.replace(/\s*\[.*?\]|\s*\(.*?\)/gi, '').trim()}
+            </span>
+          )}
+        </header>
+
+        {/* ── Responsive Mobile & Desktop Layout ── */}
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0 relative z-10 overflow-hidden">
+
+          {/* Map Area */}
+          <div className="flex-1 relative min-h-0 w-full lg:h-full z-0 overflow-hidden">
+            <StudentMap userPos={userPos} checkpoints={checkpoints} currentCp={currentCp} focusTrigger={focusTrigger} />
+
+            {/* Compact Map Controls (Top Right Corner of Map) */}
+            <div className="absolute top-2.5 right-2.5 z-20 flex flex-col gap-2">
+              <button
+                onClick={() => { setFocusTrigger('user'); locateUser(); }}
+                disabled={isLocating}
+                className="cockpit-btn-secondary px-3 py-1.5 text-[10px] tracking-wider text-ag-cyan border-ag-cyan/60 bg-ag-bg/90 backdrop-blur-md uppercase font-orbitron font-bold shadow-lg"
+              >
+                {isLocating ? 'LOCATING...' : 'MY LOCATION'}
+              </button>
+
+              {currentCp && (
+                <button
+                  onClick={() => setFocusTrigger('target')}
+                  className="cockpit-btn-secondary px-3 py-1.5 text-[10px] tracking-wider text-ag-yellow border-ag-yellow/60 bg-ag-bg/90 backdrop-blur-md uppercase font-orbitron font-bold shadow-lg"
+                >
+                  TARGET
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Panel (Mobile) / Side Panel (Desktop) */}
+          {currentCp && (
+            <div className="shrink-0 w-full lg:w-[380px] bg-ag-surface/95 backdrop-blur-md border-t lg:border-t-0 lg:border-l border-ag-border/60 p-3 sm:p-4 z-20 shadow-2xl space-y-2.5">
+              
+              {/* Station Info & Distance */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 truncate">
+                  <span className="px-2 py-0.5 bg-ag-yellow/15 border border-ag-yellow/40 text-ag-yellow font-orbitron font-black text-[10px] rounded uppercase shrink-0">
+                    STATION #{currentCp.id}
+                  </span>
+                  <h3 className="font-orbitron font-bold text-xs sm:text-sm text-ag-yellow uppercase truncate">
+                    {currentCp.label}
+                  </h3>
                 </div>
 
-                {/* ── Control Buttons ── */}
-                <div className="space-y-3 pt-3 border-t border-[rgba(255,255,255,0.06)]">
-                  <button
-                    onClick={handleUnlockTask}
-                    disabled={!canUnlock || taskLoading || arInitializing}
-                    className="cockpit-btn w-full px-6 py-4 text-xs tracking-[0.25em]"
-                  >
-                    {taskLoading ? 'PREPARING...' : arInitializing ? 'INITIALIZING CAMERA...' : 'START TASK 🚀'}
-                  </button>
-                  <button
-                    onClick={() => { setArInitializing(true); setShowAR(true); }}
-                    disabled={arInitializing}
-                    className="cockpit-btn-secondary w-full px-6 py-4 text-xs tracking-[0.25em]"
-                  >
-                    {arInitializing ? 'INITIALIZING...' : 'AR CAMERA 📷'}
-                  </button>
-                  <button
-                    onClick={() => { clearStudentSession(); navigate('/'); }}
-                    className="cockpit-btn-secondary w-full px-6 py-3 text-[11px] tracking-[0.25em] opacity-80 hover:opacity-100"
-                  >
-                    ← BACK
-                  </button>
+                <div className="shrink-0 text-right px-2.5 py-1 bg-ag-bg/80 border border-ag-border/50 rounded">
+                  <span className="text-[8px] text-ag-muted font-mono-cyber uppercase block font-bold">DIST</span>
+                  <span className={`font-orbitron font-black text-xs sm:text-sm ${canUnlock ? 'text-ag-green' : 'text-ag-yellow'}`}>
+                    {userPos ? fmtDistance(distance) : 'SEARCHING...'}
+                  </span>
                 </div>
               </div>
-            )}
-            {!currentCp && (
-              <div className="cockpit-panel p-4 lg:p-6">
+
+              {/* Primary Action Button: AR CAMERA VIEW */}
+              <button
+                onClick={() => {
+                  if (!canUnlock) {
+                    alert(`Location Lock Required: Please walk within 20 meters of ${currentCp?.label || 'the station'} to open the AR Camera View.`);
+                    return;
+                  }
+                  try { playClickSound(); } catch (e) {}
+                  setTaskStartTime(Date.now());
+                  setArInitializing(true);
+                  setShowAR(true);
+                }}
+                disabled={arInitializing}
+                className={`cockpit-btn w-full py-3 text-xs tracking-[0.2em] font-black transition-all ${
+                  canUnlock
+                    ? 'shadow-[0_0_20px_rgba(0,255,136,0.4)] bg-gradient-to-r from-ag-green/20 via-ag-cyan/30 to-ag-green/20 border-ag-green text-ag-green'
+                    : 'border-ag-yellow/60 text-ag-yellow bg-ag-yellow/10 hover:bg-ag-yellow/20'
+                }`}
+              >
+                {arInitializing ? 'INITIALIZING AR CAMERA...' : canUnlock ? 'AR CAMERA VIEW' : `LOCATION LOCK REQUIRED (${userPos ? fmtDistance(distance) : 'SEARCHING...'} / 20M)`}
+              </button>
+
+              {/* Secondary Actions Row */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={locateUser}
+                  disabled={isLocating}
+                  className="cockpit-btn-secondary py-2.5 text-[10px] tracking-wider text-ag-violet-glow border-ag-violet/40 uppercase font-orbitron font-bold truncate"
+                >
+                  {isLocating ? 'LOCATING...' : 'USE MY GPS'}
+                </button>
+
                 <button
                   onClick={() => { clearStudentSession(); navigate('/'); }}
-                  className="cockpit-btn-secondary w-full px-6 py-4 text-xs tracking-[0.25em]"
+                  className="cockpit-btn-secondary py-2.5 text-[10px] tracking-wider text-ag-muted hover:text-white uppercase font-orbitron truncate"
                 >
-                  ← BACK
+                  EXIT HUNT
                 </button>
               </div>
-            )}
-          </div>
-
-          {/* Right panel: Map */}
-          <div className="absolute inset-0 lg:relative lg:flex-1 lg:h-full z-0">
-            <StudentMap userPos={userPos} checkpoints={checkpoints} currentCp={currentCp} />
-
-            {gpsError && (
-              <div className="absolute top-5 left-5 right-5 z-10 cockpit-panel border-ag-red/60 bg-ag-bg/90 px-4.5 py-3 flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-ag-red animate-ping flex-shrink-0" />
-                <p className="font-mono-cyber text-[9.5px] text-ag-red tracking-wider uppercase leading-relaxed">
-                  GPS TELEMETRY OFFLINE: Please enable location services in your phone/browser settings to track coordinates.
-                </p>
-              </div>
-            )}
-
-            {/* Radar HUD circular tag */}
-            <div className="absolute bottom-5 left-5 z-10 cockpit-panel px-3.5 py-3 flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-full border-2 border-ag-yellow relative overflow-hidden flex items-center justify-center flex-shrink-0">
-                <div className="absolute inset-0 border-t-2 border-ag-yellow rounded-full animate-spin" style={{ animationDuration: '3.5s' }} />
-                <div className="w-2.5 h-2.5 bg-ag-yellow rounded-full animate-ping" />
-              </div>
-              <div className="font-mono-cyber text-[10px] leading-snug">
-                <div className="text-ag-yellow font-black uppercase tracking-wider">BEACON SCAN RETICLE</div>
-                <div className="text-ag-muted uppercase mt-0.5">Telemetry coordinates lock active</div>
-              </div>
             </div>
-          </div>
+          )}
 
         </div>
-
-
-        {/* Screen 6: SECTOR DISCOVERY OVERLAY */}
-        {showDiscoveryOverlay && (
-          <DiscoveryOverlay
-            currentCp={currentCp}
-            onConfirm={() => setShowDiscoveryOverlay(false)}
-          />
-        )}
-
-        {/* Screen 12: RANDOM EVENTS OVERLAY */}
-        <RandomEventOverlay
-          randomEvent={randomEvent}
-          randomEventTimer={randomEventTimer}
-          onDismiss={() => setRandomEvent(null)}
-        />
       </div>
     );
   }
 
+  // ── STAR REWARD OVERLAY ON TASK COMPLETION ──
+  if (phase === PHASE.SUBMIT && submitResult) {
+    const starsEarned = Math.min(checkpoints.length, (cpIndex >= 0 ? cpIndex + 1 : 1));
+    return (
+      <StarRewardOverlay
+        starsEarned={starsEarned}
+        totalStars={checkpoints.length || 4}
+        nextCheckpointLabel={submitResult.nextCheckpoint?.label}
+        onContinue={() => {
+          if (submitResult.finished) {
+            setPhase(PHASE.FINISHED);
+            stopGPS();
+          } else {
+            handleAdvance();
+          }
+        }}
+      />
+    );
+  }
+
   // ── TASK INTERFACE (Unified Task & Decryption Input) ──
-  if (phase === PHASE.TASK || phase === PHASE.SUBMIT) {
+  if (phase === PHASE.TASK) {
     const hasResult = !!submitResult;
 
     return (
@@ -646,7 +650,7 @@ export default function StudentView() {
                   {/* Step 1: Frequency Tuner Slider */}
                   <div className="ag-panel p-4 border-ag-border/50 bg-[rgba(22,12,44,0.6)] rounded-2xl">
                     <div className="text-[11px] font-orbitron font-bold text-ag-yellow uppercase tracking-wider mb-3 text-center">
-                      [ STEP 1: CONNECT TO SIGNAL 📡 ]
+                      [ STEP 1: CONNECT TO SIGNAL ]
                     </div>
                     
                     <div className="bg-ag-bg/60 p-4 rounded-xl border border-ag-border/40 space-y-3">
@@ -689,7 +693,7 @@ export default function StudentView() {
                   {task?.answer_prompt && (
                     <div className="ag-panel p-4 border-ag-green/30 bg-[rgba(22,12,44,0.6)] rounded-2xl">
                       <div className="text-[11px] font-orbitron font-bold text-ag-green uppercase tracking-wider mb-2">
-                        [ STEP 2: ENTER MISSION CODE KEY 🔑 ]
+                        [ STEP 2: ENTER MISSION CODE KEY ]
                       </div>
                       <p className="text-ag-text text-xs leading-relaxed font-mono-cyber mb-3 bg-ag-bg/50 p-3 rounded-xl border border-ag-border/50">
                         {task.answer_prompt}
@@ -716,29 +720,15 @@ export default function StudentView() {
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
               </div>
-              <div className="font-orbitron text-xs font-black text-ag-green uppercase tracking-wider">CHALLENGE COMPLETED & STATION SECURED! 🎉</div>
+              <div className="font-orbitron text-xs font-black text-ag-green uppercase tracking-wider">CHALLENGE COMPLETED & STATION SECURED!</div>
               
               <div className="space-y-3 max-w-xs mx-auto text-left font-mono-cyber text-[10px]">
                 <div className="space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-ag-cyan font-bold">⚡ REACTOR ENERGY</span>
-                    <span className="text-ag-green font-bold">+12%</span>
+                    <span className="text-ag-cyan font-bold">CAMPUS ORIENTATION SCORE</span>
+                    <span className="text-ag-green font-bold">+150 PTS</span>
                   </div>
-                  <div className="h-1 bg-ag-elevated rounded-full overflow-hidden"><div className="h-full bg-ag-cyan" style={{ width: '74%' }} /></div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-ag-purple font-bold">🛡 SHIELD INTEGRITY</span>
-                    <span className="text-ag-green font-bold">+8%</span>
-                  </div>
-                  <div className="h-1 bg-ag-elevated rounded-full overflow-hidden"><div className="h-full bg-ag-purple" style={{ width: '49%' }} /></div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-ag-green font-bold">🌌 NAV ACCURACY</span>
-                    <span className="text-ag-green font-bold">+15%</span>
-                  </div>
-                  <div className="h-1 bg-ag-elevated rounded-full overflow-hidden"><div className="h-full bg-ag-green" style={{ width: '70%' }} /></div>
+                  <div className="h-1 bg-ag-elevated rounded-full overflow-hidden"><div className="h-full bg-ag-cyan" style={{ width: '100%' }} /></div>
                 </div>
               </div>
 
@@ -777,7 +767,7 @@ export default function StudentView() {
                     }}
                     className="flex-1 h-14 border border-ag-purple bg-ag-purple/5 text-ag-purple hover:bg-ag-purple/10 font-orbitron text-sm tracking-wider uppercase rounded-xl font-black transition-colors"
                   >
-                    START TIMER ⏱️
+                    START TIMER
                   </button>
                   <button
                     onClick={() => {
@@ -843,7 +833,7 @@ export default function StudentView() {
                           ? 'bg-ag-green text-ag-bg hover:opacity-90 shadow-[0_0_12px_rgba(0,255,136,0.35)] cursor-pointer' 
                           : 'bg-ag-bg/60 border border-ag-border/50 text-ag-muted cursor-not-allowed'}`}
                     >
-                      {submitting ? 'SUBMITTING...' : 'SUBMIT ANSWER 🚀'}
+                      {submitting ? 'SUBMITTING...' : 'SUBMIT ANSWER'}
                     </button>
                   </div>
                 </>
