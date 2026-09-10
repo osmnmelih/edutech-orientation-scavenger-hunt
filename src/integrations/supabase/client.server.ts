@@ -6,8 +6,9 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || process.env.VITE_SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY) || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : (typeof process !== 'undefined' ? process.env : {});
+  const SUPABASE_URL = env?.SUPABASE_URL || env?.NEXT_PUBLIC_SUPABASE_URL || env?.VITE_SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = env?.SUPABASE_SECRET_KEY || env?.SUPABASE_SERVICE_ROLE_KEY || env?.SUPABASE_PUBLISHABLE_KEY || env?.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env?.VITE_SUPABASE_PUBLISHABLE_KEY;
 
   const urlToUse = SUPABASE_URL || 'https://placeholder.supabase.co';
   const keyToUse = SUPABASE_SERVICE_ROLE_KEY || 'placeholder_key';
