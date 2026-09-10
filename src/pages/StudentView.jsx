@@ -517,23 +517,15 @@ function saveCompletionToHistory(entry) {
               {/* Primary Action Button: AR CAMERA VIEW */}
               <button
                 onClick={() => {
-                  if (!canUnlock) {
-                    alert(`Location Lock Required: Please walk within 20 meters of ${currentCp?.label || 'the station'} to open the AR Camera View.`);
-                    return;
-                  }
                   try { playClickSound(); } catch (e) {}
                   setTaskStartTime(Date.now());
                   setArInitializing(true);
                   setShowAR(true);
                 }}
                 disabled={arInitializing}
-                className={`cockpit-btn w-full py-3 text-xs tracking-[0.2em] font-black transition-all ${
-                  canUnlock
-                    ? 'shadow-[0_0_20px_rgba(0,255,136,0.4)] bg-gradient-to-r from-ag-green/20 via-ag-cyan/30 to-ag-green/20 border-ag-green text-ag-green'
-                    : 'border-ag-yellow/60 text-ag-yellow bg-ag-yellow/10 hover:bg-ag-yellow/20'
-                }`}
+                className="cockpit-btn w-full py-3 text-xs tracking-[0.2em] font-black shadow-[0_0_20px_rgba(0,243,255,0.3)] border-ag-cyan text-ag-cyan bg-ag-cyan/15 hover:bg-ag-cyan/25"
               >
-                {arInitializing ? 'INITIALIZING AR CAMERA...' : canUnlock ? 'AR CAMERA VIEW' : `LOCATION LOCK REQUIRED (${userPos ? fmtDistance(distance) : 'SEARCHING...'} / 20M)`}
+                {arInitializing ? 'INITIALIZING AR CAMERA...' : 'AR CAMERA VIEW'}
               </button>
 
               {/* Secondary Actions Row */}
