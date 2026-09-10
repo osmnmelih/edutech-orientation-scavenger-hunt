@@ -73,6 +73,12 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [photoNote, setPhotoNote] = useState('');
   const [submittingPhoto, setSubmittingPhoto] = useState(false);
+  const [arToast, setArToast] = useState('');
+
+  const triggerArToast = (msg) => {
+    setArToast(msg);
+    setTimeout(() => setArToast(''), 3200);
+  };
 
   // Interactive 3D AR Beacon secret modal state
   const [showSecretModal, setShowSecretModal] = useState(false);
@@ -80,7 +86,7 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
 
   const handleTapARBeacon = () => {
     if (!canUnlock) {
-      alert(`Location Lock Required: Please walk within 20 meters of ${currentCp?.label || 'the station'} to touch the 3D AR Beacon.`);
+      triggerArToast(`LOCATION LOCK REQUIRED: Walk within 20m of ${currentCp?.label || 'the station'} to touch 3D Beacon.`);
       return;
     }
     try { playUnlockSound(); } catch (e) {}
@@ -277,6 +283,17 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
 
   return (
     <div className="fixed inset-0 z-50 bg-black overflow-hidden select-none font-orbitron">
+      {/* Non-blocking Cyber Toast Overlay */}
+      {arToast && (
+        <div className="absolute top-20 left-4 right-4 z-50 max-w-md mx-auto ag-fade-in pointer-events-none">
+          <div className="cockpit-panel border-2 border-ag-yellow bg-ag-bg/95 backdrop-blur-md px-4 py-3 text-center shadow-[0_0_25px_rgba(255,200,0,0.4)]">
+            <span className="font-orbitron font-bold text-xs text-ag-yellow uppercase tracking-wider block">
+              {arToast}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Hidden file input for upload fallback */}
       <input
         type="file"
@@ -468,7 +485,7 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
               <button
                 onClick={() => {
                   if (!canUnlock) {
-                    alert(`Location Lock Required: Please walk within 20 meters of ${currentCp?.label || 'the station'} to take a photo.`);
+                    triggerArToast(`LOCATION LOCK REQUIRED: Walk within 20m of ${currentCp?.label || 'the station'} to take photo.`);
                     return;
                   }
                   handleTakePhotoFromStream();
