@@ -106,7 +106,10 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
     return () => clearInterval(id);
   }, [cameraReady]);
 
-  // Camera stream initialization
+  const onCameraReadyRef = useRef(onCameraReady);
+  useEffect(() => { onCameraReadyRef.current = onCameraReady; }, [onCameraReady]);
+
+  // Camera stream initialization (runs ONLY ONCE on mount)
   useEffect(() => {
     let isMounted = true;
     async function start() {
@@ -148,7 +151,7 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
             videoRef.current.srcObject = stream;
           }
           setCameraReady(true);
-          onCameraReady?.();
+          onCameraReadyRef.current?.();
         } else {
           throw new Error('Could not obtain video stream.');
         }
@@ -157,7 +160,7 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
         if (isMounted) {
           setCameraError(err.message || 'Camera access restricted. You can upload/take a photo from your file gallery.');
           setCameraReady(true);
-          onCameraReady?.();
+          onCameraReadyRef.current?.();
         }
       }
     }
@@ -166,7 +169,7 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
       isMounted = false;
       streamRef.current?.getTracks()?.forEach(t => t.stop());
     };
-  }, [onCameraReady]);
+  }, []);
 
   // Draw AR Target Reticle Overlay on Canvas
   useEffect(() => {
