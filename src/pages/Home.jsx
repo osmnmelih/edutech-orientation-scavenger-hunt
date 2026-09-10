@@ -17,6 +17,9 @@ export default function Home() {
   const [joining, setJoining]                 = useState(false);
   const [joinError, setJoinError]             = useState('');
 
+  const [showGpsModal, setShowGpsModal]       = useState(false);
+  const [gpsRequesting, setGpsRequesting]     = useState(false);
+
   const click   = () => { try { playClickSound();   } catch (e) {} };
   const success = () => { try { playSuccessSound(); } catch (e) {} };
 
@@ -34,17 +37,12 @@ export default function Home() {
     click();
     try { startAmbientSpaceMusic(); } catch (e) {}
 
-    // Request browser geolocation permission
-    if (navigator.geolocation) {
+    // Pre-warm browser geolocation without blocking alerts
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        () => console.log("Location permission granted."),
-        (err) => {
-          console.warn("Location permission error:", err);
-          if (err.code === 1) {
-            alert("Please allow location permission in your browser. Location access is required for the campus orientation scavenger hunt.");
-          }
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
+        () => console.log("Location pre-warm granted."),
+        (err) => console.warn("Location pre-warm info:", err),
+        { enableHighAccuracy: true, timeout: 5000 }
       );
     }
     setStage('role');
@@ -55,10 +53,35 @@ export default function Home() {
     navigate(path);
   }
 
-  const handleJoin = async (e) => {
-    e.preventDefault();
+  const handleJoin = (e) => {
+    if (e) e.preventDefault();
     if (!callsign.trim() || !joinCode.trim()) return;
     click();
+    setShowGpsModal(true);
+  };
+
+  const handleConfirmGpsAndProceed = async () => {
+    setGpsRequesting(true);
+    click();
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log("GPS location granted:", pos.coords);
+          finalizeRegistrationAndNavigate();
+        },
+        (err) => {
+          console.warn("GPS location permission notice:", err);
+          finalizeRegistrationAndNavigate();
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      finalizeRegistrationAndNavigate();
+    }
+  };
+
+  const finalizeRegistrationAndNavigate = async () => {
     setJoining(true);
     setJoinError('');
 
@@ -148,6 +171,8 @@ export default function Home() {
       setJoinError('Connection error. Please try again.');
     } finally {
       setJoining(false);
+      setGpsRequesting(false);
+      setShowGpsModal(false);
     }
   };
 
@@ -315,6 +340,69 @@ export default function Home() {
               </button>
             </form>
           </main>
+        )}
+
+        {/* ══════════════ GPS LOCATION PERMISSION ONBOARDING MODAL ══════════════ */}
+        {showGpsModal && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 ag-fade-in">
+            <div className="cockpit-panel max-w-md w-full p-6 sm:p-8 border-2 border-ag-gold flex flex-col items-center text-center shadow-[0_0_50px_rgba(255,200,0,0.25)] rounded-3xl relative overflow-hidden bg-ag-surface/95">
+              
+              {/* Top Ambient Glow */}
+              <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-48 bg-ag-gold/20 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Satellite / Location Radar Icon */}
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-ag-gold/20 via-ag-gold/10 to-transparent border border-ag-gold/60 flex items-center justify-center text-ag-gold mb-5 shadow-[0_0_25px_rgba(255,200,0,0.3)] animate-pulse">
+                <svg className="w-9 h-9 stroke-ag-gold" fill="none" viewBox="0 0 24 24" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+              </div>
+
+              {/* Title */}
+              <h3 className="font-orbitron font-black text-lg sm:text-xl text-ag-gold tracking-wider uppercase mb-2">
+                ENABLE CAMPUS GPS NAVIGATION
+              </h3>
+
+              {/* Subtitle Badge */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ag-cyan/15 border border-ag-cyan/40 mb-4 shadow-[0_0_15px_rgba(0,229,255,0.2)]">
+                <span className="w-2 h-2 rounded-full bg-ag-cyan animate-ping" />
+                <span className="text-[10px] font-mono-cyber font-bold tracking-[0.25em] text-ag-cyan uppercase">
+                  LOCATION ACCESS REQUIRED
+                </span>
+              </div>
+
+              {/* Main Description */}
+              <p className="font-mono-cyber text-xs sm:text-sm text-ag-text/90 leading-relaxed mb-5 font-medium">
+                This orientation scavenger hunt uses your device GPS to track campus checkpoints, calculate station distances, and unlock AR photo challenges.
+              </p>
+
+              {/* Browser Permission Tip Box */}
+              <div className="w-full p-3.5 rounded-2xl bg-ag-gold/10 border border-ag-gold/40 text-[11px] font-mono-cyber text-ag-gold/90 text-center mb-6 leading-normal">
+                💡 When prompted by your browser, tap <strong className="text-ag-gold font-bold">"Allow"</strong> or <strong className="text-ag-gold font-bold">"While Using the App"</strong> to enable live campus tracking.
+              </div>
+
+              {/* Action Buttons */}
+              <button
+                id="btn-confirm-gps"
+                type="button"
+                disabled={gpsRequesting || joining}
+                onClick={handleConfirmGpsAndProceed}
+                className="cockpit-btn w-full py-4 text-xs sm:text-sm tracking-[0.25em] font-black border-2 border-ag-gold text-ag-gold bg-gradient-to-r from-ag-gold/20 via-yellow-400/25 to-ag-gold/20 hover:bg-ag-gold hover:text-black shadow-[0_0_30px_rgba(255,200,0,0.35)] rounded-2xl transition-all duration-300 mb-3"
+              >
+                {gpsRequesting || joining ? 'STARTING CAMPUS NAVIGATION...' : 'ENABLE GPS & ENTER HUNT ➔'}
+              </button>
+
+              <button
+                type="button"
+                disabled={gpsRequesting || joining}
+                onClick={() => setShowGpsModal(false)}
+                className="text-xs font-mono-cyber text-ag-muted hover:text-ag-text tracking-wider uppercase underline py-1"
+              >
+                CANCEL
+              </button>
+
+            </div>
+          </div>
         )}
 
       </div>

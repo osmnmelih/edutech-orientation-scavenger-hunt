@@ -74,6 +74,12 @@ export default function StudentView() {
   const [arInitializing, setArInitializing] = useState(false);
   const [focusTrigger, setFocusTrigger] = useState(null);
 
+  const [studentToast, setStudentToast] = useState('');
+  const triggerStudentToast = (msg) => {
+    setStudentToast(msg);
+    setTimeout(() => setStudentToast(''), 3500);
+  };
+
   useEffect(() => {
     const saved = loadStudentSession();
     if (saved) {
@@ -253,7 +259,7 @@ export default function StudentView() {
   function handleUnlockTask() {
     if (!currentCp?.id) return;
     if (!canUnlock) {
-      alert(`Location Lock Required: Please walk within 20 meters of ${currentCp.label} to start the AR camera task.`);
+      triggerStudentToast(`LOCATION LOCK REQUIRED: Please walk within 20 meters of ${currentCp.label} to start the AR camera task.`);
       return;
     }
     try { playUnlockSound(); } catch (e) {}
@@ -438,6 +444,14 @@ function saveCompletionToHistory(entry) {
     return (
       <div className="h-[100dvh] w-full flex flex-col bg-ag-bg select-none overflow-hidden">
         <div className="scanlines opacity-15 pointer-events-none" />
+
+        {/* Non-blocking Cyber Toast Notification Overlay */}
+        {studentToast && (
+          <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[90%] p-3.5 bg-ag-surface/95 border-2 border-ag-gold text-ag-gold font-mono-cyber text-xs text-center rounded-2xl shadow-[0_0_30px_rgba(255,200,0,0.4)] backdrop-blur-md ag-fade-in flex items-center justify-center gap-2">
+            <span>⚠️</span>
+            <span className="font-bold uppercase tracking-wider">{studentToast}</span>
+          </div>
+        )}
         
         {/* Navigation HUD header */}
         <header className="px-3 py-2 bg-ag-surface/95 backdrop-blur-md border-b border-ag-border/60 flex items-center justify-between gap-2 z-30 shrink-0 shadow-lg">
