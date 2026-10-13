@@ -93,7 +93,7 @@ export default function Home() {
 
       try {
         const joinPromise = sessions.join(joinCode.trim().toUpperCase(), combinedName);
-        const fastFallback = new Promise((_, reject) => setTimeout(() => reject(new Error('Fast local fallback')), 600));
+        const fastFallback = new Promise((_, reject) => setTimeout(() => reject(new Error('Fast local fallback')), 3500));
         const { data } = await Promise.race([joinPromise, fastFallback]);
         sessionData = data.session;
         teamData = data.team;

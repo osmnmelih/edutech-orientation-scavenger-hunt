@@ -7,15 +7,11 @@ import type { Database } from './types';
 
 function createSupabaseAdminClient() {
   const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : (typeof process !== 'undefined' ? process.env : {});
-  const SUPABASE_URL = env?.SUPABASE_URL || env?.NEXT_PUBLIC_SUPABASE_URL || env?.VITE_SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = env?.SUPABASE_SECRET_KEY || env?.SUPABASE_SERVICE_ROLE_KEY || env?.SUPABASE_PUBLISHABLE_KEY || env?.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env?.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const SUPABASE_URL = env?.SUPABASE_URL || env?.NEXT_PUBLIC_SUPABASE_URL || env?.VITE_SUPABASE_URL || 'https://kvocoscsioezfylzxbwf.supabase.co';
+  const SUPABASE_SERVICE_ROLE_KEY = env?.SUPABASE_SECRET_KEY || env?.SUPABASE_SERVICE_ROLE_KEY || env?.SUPABASE_PUBLISHABLE_KEY || env?.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env?.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2b2Nvc2NzaW9lemZ5bHp4YndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5Mzk1NjMsImV4cCI6MjA5ODUxNTU2M30.OrDW6bAaHecadIfjpvijbIfjZG4Ky6sywa3yTJALoBE';
 
-  const urlToUse = SUPABASE_URL || 'https://placeholder.supabase.co';
-  const keyToUse = SUPABASE_SERVICE_ROLE_KEY || 'placeholder_key';
-
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn(`[Supabase Admin] Missing environment variables. Operating in local offline mode.`);
-  }
+  const urlToUse = (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) ? SUPABASE_URL : 'https://kvocoscsioezfylzxbwf.supabase.co';
+  const keyToUse = (SUPABASE_SERVICE_ROLE_KEY && !SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')) ? SUPABASE_SERVICE_ROLE_KEY : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2b2Nvc2NzaW9lemZ5bHp4YndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5Mzk1NjMsImV4cCI6MjA5ODUxNTU2M30.OrDW6bAaHecadIfjpvijbIfjZG4Ky6sywa3yTJALoBE';
 
   return createClient<Database>(urlToUse, keyToUse, {
     auth: {

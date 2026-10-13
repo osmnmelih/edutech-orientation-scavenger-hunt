@@ -193,8 +193,9 @@ export default function SessionMonitor() {
   useEffect(() => {
     fetchSession();
     const iv = setInterval(() => {
+      fetchSession();
       refreshData();
-    }, 2000); // 2-second fast sync for active student positions & completions
+    }, 2500); // 2.5-second live polling for students & completions across all devices
 
     let bc;
     try {

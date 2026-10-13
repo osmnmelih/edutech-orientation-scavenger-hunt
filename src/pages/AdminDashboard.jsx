@@ -93,7 +93,7 @@ export default function AdminDashboard() {
       let sessionData = null;
       try {
         const fetchPromise = sessions.getByCode('EDUTECH26');
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Fast local fallback')), 500));
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Fast local fallback')), 3500));
         const { data } = await Promise.race([fetchPromise, timeoutPromise]);
         sessionData = data;
       } catch (err) {

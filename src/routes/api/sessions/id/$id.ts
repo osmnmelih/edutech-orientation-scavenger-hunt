@@ -6,9 +6,18 @@ export const Route = createFileRoute("/api/sessions/id/$id")({
   server: {
     handlers: {
       GET: async ({ params }) => {
-        const id = Number(params.id);
-        const { data: session } = await db.from("sessions").select("*").eq("id", id).maybeSingle();
+        let session = null;
+        const numId = Number(params.id);
+        if (!isNaN(numId) && numId > 0) {
+          const { data } = await db.from("sessions").select("*").eq("id", numId).maybeSingle();
+          session = data;
+        } else {
+          const code = (params.id?.startsWith('edutech_host') ? 'EDUTECH26' : params.id)?.toUpperCase();
+          const { data } = await db.from("sessions").select("*").eq("join_code", code).maybeSingle();
+          session = data;
+        }
         if (!session) return Response.json({ error: "Session not found" }, { status: 404 });
+        const id = session.id;
 
         const { data: checkpoints } = await db
           .from("checkpoints")
