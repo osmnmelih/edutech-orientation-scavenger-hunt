@@ -9,6 +9,11 @@ export const sessions = {
   getQR:     (id)                => api.get(`/sessions/${id}/qr`),
   join:      (code, teamName)    => api.post(`/sessions/${code}/join`, { teamName }),
   setStatus: (id, status)        => api.patch(`/sessions/${id}/status`, { status }),
+  clear:     (id, options = {})  => api.post(`/sessions/${id}/clear`, options),
+};
+
+export const teams = {
+  delete:    (id)                => api.delete(`/teams/${id}`),
 };
 
 export const checkpoints = {
@@ -30,6 +35,7 @@ export const hints = {
 export const completions = {
   submit:    (data)              => api.post('/complete', data),
   getByTeam: (teamId)            => api.get(`/completions/${teamId}`),
+  delete:    (data)              => api.post('/completions/delete', data),
 };
 
 export const reports = {

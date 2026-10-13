@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from '../router-compat.jsx';
-import { sessions as sessionsApi } from '../api.js';
+import { sessions as sessionsApi, teams as teamsApi, completions as completionsApi } from '../api.js';
 import CockpitFrame from '../components/CockpitFrame.jsx';
 import LiveLocationMap from '../components/LiveLocationMap.jsx';
 
@@ -108,18 +108,67 @@ export default function SessionMonitor() {
     refreshData();
   }, [activeTab, refreshData]);
 
-  const handleDeletePhoto = (photoId) => {
+  const handleDeletePhoto = async (photoItem) => {
+    const photoId = photoItem?.id || photoItem;
     const updated = savedPhotos.filter((p, idx) => (p.id ? p.id !== photoId : idx !== photoId));
     setSavedPhotos(updated);
     saveCompletions(updated);
+
+    // Remove from in-memory session teams completions immediately
+    setSession(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        teams: (prev.teams || []).map(t => ({
+          ...t,
+          completions: (t.completions || []).filter(c => {
+            if (photoItem?.compDbId && c.id === photoItem.compDbId) return false;
+            if (photoItem?.teamId && t.id === photoItem.teamId && photoItem?.checkpointId && (c.checkpoint_id === photoItem.checkpointId || c.order_num === photoItem.checkpointId)) return false;
+            return true;
+          })
+        }))
+      };
+    });
+
+    try {
+      await completionsApi.delete({
+        id: photoItem?.compDbId,
+        teamId: photoItem?.teamId,
+        checkpointId: photoItem?.checkpointId
+      });
+    } catch (err) {
+      console.warn("Backend delete photo error:", err);
+    }
+
+    setTimeout(() => {
+      fetchSession();
+    }, 400);
   };
 
-  const handleClearAllPhotos = () => {
+  const handleClearAllPhotos = async () => {
     setSavedPhotos([]);
     saveCompletions([]);
+    setSession(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        teams: (prev.teams || []).map(t => ({ ...t, completions: [] }))
+      };
+    });
+
+    try {
+      const targetId = (!id || id === 'undefined' || String(id).startsWith('edutech_host')) ? 10 : id;
+      await sessionsApi.clear(targetId, { photosOnly: true });
+    } catch (err) {
+      console.warn("Backend clear all photos error:", err);
+    }
+
+    setTimeout(() => {
+      fetchSession();
+    }, 400);
   };
 
-  const handleDeleteParticipant = (targetIdOrName) => {
+  const handleDeleteParticipant = async (targetIdOrName) => {
     try {
       const active = JSON.parse(localStorage.getItem('edutech_active_students') || '[]');
       const updatedActive = active.filter(s => s.id !== targetIdOrName && s.name !== targetIdOrName);
@@ -134,6 +183,14 @@ export default function SessionMonitor() {
       const updatedPhotos = photos.filter(p => p.teamId !== targetIdOrName && p.teamName !== targetIdOrName);
       saveCompletions(updatedPhotos);
 
+      setSession(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          teams: (prev.teams || []).filter(t => t.id !== targetIdOrName && t.name !== targetIdOrName)
+        };
+      });
+
       refreshData();
       try {
         const bc = new BroadcastChannel('edutech_scavenger_hunt');
@@ -142,13 +199,24 @@ export default function SessionMonitor() {
       } catch (e) {}
       window.dispatchEvent(new CustomEvent('edutech_student_update'));
     } catch (e) {}
+
+    try {
+      await teamsApi.delete(targetIdOrName);
+    } catch (err) {
+      console.warn("Backend delete team error:", err);
+    }
+
+    setTimeout(() => {
+      fetchSession();
+    }, 400);
   };
 
-  const handleClearAllParticipants = () => {
+  const handleClearAllParticipants = async () => {
     try {
       localStorage.removeItem('edutech_active_students');
       localStorage.removeItem('orienteering_student_session');
       saveCompletions([]);
+      setSession(prev => (prev ? { ...prev, teams: [] } : prev));
       refreshData();
       try {
         const bc = new BroadcastChannel('edutech_scavenger_hunt');
@@ -157,6 +225,17 @@ export default function SessionMonitor() {
       } catch (e) {}
       window.dispatchEvent(new CustomEvent('edutech_student_update'));
     } catch (e) {}
+
+    try {
+      const targetId = (!id || id === 'undefined' || String(id).startsWith('edutech_host')) ? 10 : id;
+      await sessionsApi.clear(targetId, { photosOnly: false });
+    } catch (err) {
+      console.warn("Backend clear all participants error:", err);
+    }
+
+    setTimeout(() => {
+      fetchSession();
+    }, 400);
   };
 
   const fetchSession = useCallback(async () => {
@@ -348,6 +427,7 @@ export default function SessionMonitor() {
         photoKeys.add(key);
         allSubmittedPhotos.push({
           id: key,
+          compDbId: comp.id,
           teamId: team.id,
           teamName: team.name,
           checkpointId: comp.checkpoint_id || comp.order_num || 1,
@@ -752,7 +832,7 @@ export default function SessionMonitor() {
                     {/* Delete Photo Button */}
                     <div className="pt-2 border-t border-ag-border/50">
                       <button
-                        onClick={() => handleDeletePhoto(item.id || idx)}
+                        onClick={() => handleDeletePhoto(item)}
                         className="w-full py-2 px-3 bg-ag-red/15 hover:bg-ag-red/30 border border-ag-red/40 rounded-xl text-ag-red font-orbitron font-bold text-xs uppercase tracking-wider flex items-center justify-center transition-all"
                       >
                         DELETE PHOTO

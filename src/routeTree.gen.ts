@@ -19,14 +19,17 @@ import { Route as ApiCompleteRouteImport } from './routes/api/complete'
 import { Route as ApiSessionsIndexRouteImport } from './routes/api/sessions/index'
 import { Route as ApiHintIndexRouteImport } from './routes/api/hint/index'
 import { Route as ApiCheckpointsIndexRouteImport } from './routes/api/checkpoints/index'
+import { Route as ApiTeamsIdRouteImport } from './routes/api/teams/$id'
 import { Route as ApiSessionsCodeRouteImport } from './routes/api/sessions/$code'
 import { Route as ApiReportSessionIdRouteImport } from './routes/api/report/$sessionId'
+import { Route as ApiCompletionsDeleteRouteImport } from './routes/api/completions/delete'
 import { Route as ApiCompletionsTeamIdRouteImport } from './routes/api/completions/$teamId'
 import { Route as ApiCheckpointsIdRouteImport } from './routes/api/checkpoints/$id'
 import { Route as ApiTaskCheckpointIdTeamIdRouteImport } from './routes/api/task/$checkpointId/$teamId'
 import { Route as ApiSessionsIdIdRouteImport } from './routes/api/sessions/id/$id'
 import { Route as ApiSessionsIdStatusRouteImport } from './routes/api/sessions/$id/status'
 import { Route as ApiSessionsIdQrRouteImport } from './routes/api/sessions/$id/qr'
+import { Route as ApiSessionsIdClearRouteImport } from './routes/api/sessions/$id/clear'
 import { Route as ApiSessionsCodeJoinRouteImport } from './routes/api/sessions/$code/join'
 import { Route as ApiCheckpointsSessionSessionIdRouteImport } from './routes/api/checkpoints/session/$sessionId'
 
@@ -80,6 +83,11 @@ const ApiCheckpointsIndexRoute = ApiCheckpointsIndexRouteImport.update({
   path: '/api/checkpoints/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTeamsIdRoute = ApiTeamsIdRouteImport.update({
+  id: '/api/teams/$id',
+  path: '/api/teams/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSessionsCodeRoute = ApiSessionsCodeRouteImport.update({
   id: '/api/sessions/$code',
   path: '/api/sessions/$code',
@@ -88,6 +96,11 @@ const ApiSessionsCodeRoute = ApiSessionsCodeRouteImport.update({
 const ApiReportSessionIdRoute = ApiReportSessionIdRouteImport.update({
   id: '/api/report/$sessionId',
   path: '/api/report/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCompletionsDeleteRoute = ApiCompletionsDeleteRouteImport.update({
+  id: '/api/completions/delete',
+  path: '/api/completions/delete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCompletionsTeamIdRoute = ApiCompletionsTeamIdRouteImport.update({
@@ -121,6 +134,11 @@ const ApiSessionsIdQrRoute = ApiSessionsIdQrRouteImport.update({
   path: '/api/sessions/$id/qr',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSessionsIdClearRoute = ApiSessionsIdClearRouteImport.update({
+  id: '/api/sessions/$id/clear',
+  path: '/api/sessions/$id/clear',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSessionsCodeJoinRoute = ApiSessionsCodeJoinRouteImport.update({
   id: '/join',
   path: '/join',
@@ -143,13 +161,16 @@ export interface FileRoutesByFullPath {
   '/api/location': typeof ApiLocationRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
+  '/api/completions/delete': typeof ApiCompletionsDeleteRoute
   '/api/report/$sessionId': typeof ApiReportSessionIdRoute
   '/api/sessions/$code': typeof ApiSessionsCodeRouteWithChildren
+  '/api/teams/$id': typeof ApiTeamsIdRoute
   '/api/checkpoints/': typeof ApiCheckpointsIndexRoute
   '/api/hint/': typeof ApiHintIndexRoute
   '/api/sessions/': typeof ApiSessionsIndexRoute
   '/api/checkpoints/session/$sessionId': typeof ApiCheckpointsSessionSessionIdRoute
   '/api/sessions/$code/join': typeof ApiSessionsCodeJoinRoute
+  '/api/sessions/$id/clear': typeof ApiSessionsIdClearRoute
   '/api/sessions/$id/qr': typeof ApiSessionsIdQrRoute
   '/api/sessions/$id/status': typeof ApiSessionsIdStatusRoute
   '/api/sessions/id/$id': typeof ApiSessionsIdIdRoute
@@ -165,13 +186,16 @@ export interface FileRoutesByTo {
   '/api/location': typeof ApiLocationRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
+  '/api/completions/delete': typeof ApiCompletionsDeleteRoute
   '/api/report/$sessionId': typeof ApiReportSessionIdRoute
   '/api/sessions/$code': typeof ApiSessionsCodeRouteWithChildren
+  '/api/teams/$id': typeof ApiTeamsIdRoute
   '/api/checkpoints': typeof ApiCheckpointsIndexRoute
   '/api/hint': typeof ApiHintIndexRoute
   '/api/sessions': typeof ApiSessionsIndexRoute
   '/api/checkpoints/session/$sessionId': typeof ApiCheckpointsSessionSessionIdRoute
   '/api/sessions/$code/join': typeof ApiSessionsCodeJoinRoute
+  '/api/sessions/$id/clear': typeof ApiSessionsIdClearRoute
   '/api/sessions/$id/qr': typeof ApiSessionsIdQrRoute
   '/api/sessions/$id/status': typeof ApiSessionsIdStatusRoute
   '/api/sessions/id/$id': typeof ApiSessionsIdIdRoute
@@ -188,13 +212,16 @@ export interface FileRoutesById {
   '/api/location': typeof ApiLocationRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
+  '/api/completions/delete': typeof ApiCompletionsDeleteRoute
   '/api/report/$sessionId': typeof ApiReportSessionIdRoute
   '/api/sessions/$code': typeof ApiSessionsCodeRouteWithChildren
+  '/api/teams/$id': typeof ApiTeamsIdRoute
   '/api/checkpoints/': typeof ApiCheckpointsIndexRoute
   '/api/hint/': typeof ApiHintIndexRoute
   '/api/sessions/': typeof ApiSessionsIndexRoute
   '/api/checkpoints/session/$sessionId': typeof ApiCheckpointsSessionSessionIdRoute
   '/api/sessions/$code/join': typeof ApiSessionsCodeJoinRoute
+  '/api/sessions/$id/clear': typeof ApiSessionsIdClearRoute
   '/api/sessions/$id/qr': typeof ApiSessionsIdQrRoute
   '/api/sessions/$id/status': typeof ApiSessionsIdStatusRoute
   '/api/sessions/id/$id': typeof ApiSessionsIdIdRoute
@@ -212,13 +239,16 @@ export interface FileRouteTypes {
     | '/api/location'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
+    | '/api/completions/delete'
     | '/api/report/$sessionId'
     | '/api/sessions/$code'
+    | '/api/teams/$id'
     | '/api/checkpoints/'
     | '/api/hint/'
     | '/api/sessions/'
     | '/api/checkpoints/session/$sessionId'
     | '/api/sessions/$code/join'
+    | '/api/sessions/$id/clear'
     | '/api/sessions/$id/qr'
     | '/api/sessions/$id/status'
     | '/api/sessions/id/$id'
@@ -234,13 +264,16 @@ export interface FileRouteTypes {
     | '/api/location'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
+    | '/api/completions/delete'
     | '/api/report/$sessionId'
     | '/api/sessions/$code'
+    | '/api/teams/$id'
     | '/api/checkpoints'
     | '/api/hint'
     | '/api/sessions'
     | '/api/checkpoints/session/$sessionId'
     | '/api/sessions/$code/join'
+    | '/api/sessions/$id/clear'
     | '/api/sessions/$id/qr'
     | '/api/sessions/$id/status'
     | '/api/sessions/id/$id'
@@ -256,13 +289,16 @@ export interface FileRouteTypes {
     | '/api/location'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
+    | '/api/completions/delete'
     | '/api/report/$sessionId'
     | '/api/sessions/$code'
+    | '/api/teams/$id'
     | '/api/checkpoints/'
     | '/api/hint/'
     | '/api/sessions/'
     | '/api/checkpoints/session/$sessionId'
     | '/api/sessions/$code/join'
+    | '/api/sessions/$id/clear'
     | '/api/sessions/$id/qr'
     | '/api/sessions/$id/status'
     | '/api/sessions/id/$id'
@@ -279,12 +315,15 @@ export interface RootRouteChildren {
   ApiLocationRoute: typeof ApiLocationRoute
   ApiCheckpointsIdRoute: typeof ApiCheckpointsIdRoute
   ApiCompletionsTeamIdRoute: typeof ApiCompletionsTeamIdRoute
+  ApiCompletionsDeleteRoute: typeof ApiCompletionsDeleteRoute
   ApiReportSessionIdRoute: typeof ApiReportSessionIdRoute
   ApiSessionsCodeRoute: typeof ApiSessionsCodeRouteWithChildren
+  ApiTeamsIdRoute: typeof ApiTeamsIdRoute
   ApiCheckpointsIndexRoute: typeof ApiCheckpointsIndexRoute
   ApiHintIndexRoute: typeof ApiHintIndexRoute
   ApiSessionsIndexRoute: typeof ApiSessionsIndexRoute
   ApiCheckpointsSessionSessionIdRoute: typeof ApiCheckpointsSessionSessionIdRoute
+  ApiSessionsIdClearRoute: typeof ApiSessionsIdClearRoute
   ApiSessionsIdQrRoute: typeof ApiSessionsIdQrRoute
   ApiSessionsIdStatusRoute: typeof ApiSessionsIdStatusRoute
   ApiSessionsIdIdRoute: typeof ApiSessionsIdIdRoute
@@ -363,6 +402,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCheckpointsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/teams/$id': {
+      id: '/api/teams/$id'
+      path: '/api/teams/$id'
+      fullPath: '/api/teams/$id'
+      preLoaderRoute: typeof ApiTeamsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sessions/$code': {
       id: '/api/sessions/$code'
       path: '/api/sessions/$code'
@@ -375,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/api/report/$sessionId'
       fullPath: '/api/report/$sessionId'
       preLoaderRoute: typeof ApiReportSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/completions/delete': {
+      id: '/api/completions/delete'
+      path: '/api/completions/delete'
+      fullPath: '/api/completions/delete'
+      preLoaderRoute: typeof ApiCompletionsDeleteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/completions/$teamId': {
@@ -419,6 +472,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSessionsIdQrRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sessions/$id/clear': {
+      id: '/api/sessions/$id/clear'
+      path: '/api/sessions/$id/clear'
+      fullPath: '/api/sessions/$id/clear'
+      preLoaderRoute: typeof ApiSessionsIdClearRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sessions/$code/join': {
       id: '/api/sessions/$code/join'
       path: '/join'
@@ -458,12 +518,15 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLocationRoute: ApiLocationRoute,
   ApiCheckpointsIdRoute: ApiCheckpointsIdRoute,
   ApiCompletionsTeamIdRoute: ApiCompletionsTeamIdRoute,
+  ApiCompletionsDeleteRoute: ApiCompletionsDeleteRoute,
   ApiReportSessionIdRoute: ApiReportSessionIdRoute,
   ApiSessionsCodeRoute: ApiSessionsCodeRouteWithChildren,
+  ApiTeamsIdRoute: ApiTeamsIdRoute,
   ApiCheckpointsIndexRoute: ApiCheckpointsIndexRoute,
   ApiHintIndexRoute: ApiHintIndexRoute,
   ApiSessionsIndexRoute: ApiSessionsIndexRoute,
   ApiCheckpointsSessionSessionIdRoute: ApiCheckpointsSessionSessionIdRoute,
+  ApiSessionsIdClearRoute: ApiSessionsIdClearRoute,
   ApiSessionsIdQrRoute: ApiSessionsIdQrRoute,
   ApiSessionsIdStatusRoute: ApiSessionsIdStatusRoute,
   ApiSessionsIdIdRoute: ApiSessionsIdIdRoute,
