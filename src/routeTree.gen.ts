@@ -14,6 +14,7 @@ import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiLocationRouteImport } from './routes/api/location'
 import { Route as ApiCompleteRouteImport } from './routes/api/complete'
 import { Route as ApiSessionsIndexRouteImport } from './routes/api/sessions/index'
 import { Route as ApiHintIndexRouteImport } from './routes/api/hint/index'
@@ -52,6 +53,11 @@ const SplatRoute = SplatRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLocationRoute = ApiLocationRouteImport.update({
+  id: '/api/location',
+  path: '/api/location',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCompleteRoute = ApiCompleteRouteImport.update({
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/presentation': typeof PresentationRoute
   '/student': typeof StudentRoute
   '/api/complete': typeof ApiCompleteRoute
+  '/api/location': typeof ApiLocationRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
   '/api/report/$sessionId': typeof ApiReportSessionIdRoute
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/presentation': typeof PresentationRoute
   '/student': typeof StudentRoute
   '/api/complete': typeof ApiCompleteRoute
+  '/api/location': typeof ApiLocationRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
   '/api/report/$sessionId': typeof ApiReportSessionIdRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/presentation': typeof PresentationRoute
   '/student': typeof StudentRoute
   '/api/complete': typeof ApiCompleteRoute
+  '/api/location': typeof ApiLocationRoute
   '/api/checkpoints/$id': typeof ApiCheckpointsIdRoute
   '/api/completions/$teamId': typeof ApiCompletionsTeamIdRoute
   '/api/report/$sessionId': typeof ApiReportSessionIdRoute
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/presentation'
     | '/student'
     | '/api/complete'
+    | '/api/location'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
     | '/api/report/$sessionId'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/presentation'
     | '/student'
     | '/api/complete'
+    | '/api/location'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
     | '/api/report/$sessionId'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '/presentation'
     | '/student'
     | '/api/complete'
+    | '/api/location'
     | '/api/checkpoints/$id'
     | '/api/completions/$teamId'
     | '/api/report/$sessionId'
@@ -264,6 +276,7 @@ export interface RootRouteChildren {
   PresentationRoute: typeof PresentationRoute
   StudentRoute: typeof StudentRoute
   ApiCompleteRoute: typeof ApiCompleteRoute
+  ApiLocationRoute: typeof ApiLocationRoute
   ApiCheckpointsIdRoute: typeof ApiCheckpointsIdRoute
   ApiCompletionsTeamIdRoute: typeof ApiCompletionsTeamIdRoute
   ApiReportSessionIdRoute: typeof ApiReportSessionIdRoute
@@ -313,6 +326,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/location': {
+      id: '/api/location'
+      path: '/api/location'
+      fullPath: '/api/location'
+      preLoaderRoute: typeof ApiLocationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/complete': {
@@ -435,6 +455,7 @@ const rootRouteChildren: RootRouteChildren = {
   PresentationRoute: PresentationRoute,
   StudentRoute: StudentRoute,
   ApiCompleteRoute: ApiCompleteRoute,
+  ApiLocationRoute: ApiLocationRoute,
   ApiCheckpointsIdRoute: ApiCheckpointsIdRoute,
   ApiCompletionsTeamIdRoute: ApiCompletionsTeamIdRoute,
   ApiReportSessionIdRoute: ApiReportSessionIdRoute,

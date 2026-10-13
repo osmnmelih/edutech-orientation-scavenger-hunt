@@ -92,13 +92,16 @@ export default function AdminDashboard() {
     try {
       let sessionData = null;
       try {
-        const fetchPromise = sessions.getByCode('EDUTECH26');
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Fast local fallback')), 3500));
-        const { data } = await Promise.race([fetchPromise, timeoutPromise]);
-        sessionData = data;
+        const { data } = await sessions.getByCode('EDUTECH26');
+        if (data && data.id) {
+          sessionData = data;
+        }
       } catch (err) {
+        console.warn("Lobby lookup by code:", err);
+      }
+      if (!sessionData) {
         sessionData = {
-          id: `edutech_host_${Date.now()}`,
+          id: 10,
           name: orientationName,
           join_code: 'EDUTECH26'
         };
@@ -109,6 +112,7 @@ export default function AdminDashboard() {
       navigate(`/admin/session/${sessionData.id}`);
     } catch (err) {
       console.error(err);
+      navigate('/admin/session/10');
     } finally {
       setLoading(false);
     }
@@ -116,14 +120,13 @@ export default function AdminDashboard() {
 
   async function handleRejoinSaved(saved) {
     try {
-      const { data } = await sessions.getById(saved.id);
+      const targetId = (saved.join_code === 'EDUTECH26' || String(saved.id).startsWith('edutech_host')) ? 10 : saved.id;
+      const { data } = await sessions.getById(targetId);
       saveSessionToHistory(data);
       setSavedSessions(loadSavedSessions());
       navigate(`/admin/session/${data.id}`);
     } catch {
-      removeSessionFromHistory(saved.id);
-      setSavedSessions(loadSavedSessions());
-      setRejoinError(`Session "${saved.name}" no longer exists.`);
+      navigate('/admin/session/10');
     }
   }
 

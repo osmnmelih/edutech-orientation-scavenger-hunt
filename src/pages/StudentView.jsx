@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '../router-compat.jsx';
-import { sessions, tasks, hints as hintsApi, completions } from '../api.js';
+import { sessions, tasks, hints as hintsApi, completions, locations } from '../api.js';
 import StudentMap from '../components/StudentMap.jsx';
 import HintPanel from '../components/HintPanel.jsx';
 import ARView from '../components/ARView.jsx';
@@ -76,6 +76,7 @@ export default function StudentView() {
   const [manualUnlocked, setManualUnlocked] = useState(false);
 
   const [studentToast, setStudentToast] = useState('');
+  const lastLocationPingRef = useRef(0);
   const triggerStudentToast = (msg) => {
     setStudentToast(msg);
     setTimeout(() => setStudentToast(''), 3500);
@@ -99,6 +100,30 @@ export default function StudentView() {
       navigate('/');
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-sync team with Supabase backend so student appears in Admin Dashboard across all devices
+  useEffect(() => {
+    async function syncSupabaseTeam() {
+      if (!team) return;
+      const tName = team.team_name || team.name;
+      if (!tName) return;
+      if (typeof team.id === 'string' && team.id.startsWith('team_')) {
+        try {
+          const { data } = await sessions.join('EDUTECH26', tName);
+          if (data && data.team) {
+            setTeam(data.team);
+            const saved = loadStudentSession();
+            if (saved) {
+              saveStudentSession({ ...saved, team: data.team, session: data.session || saved.session });
+            }
+          }
+        } catch (e) {
+          console.warn("Could not sync local team to Supabase:", e);
+        }
+      }
+    }
+    syncSupabaseTeam();
+  }, [team]);
 
   useEffect(() => {
     if (phase === PHASE.MAP) {
@@ -162,6 +187,19 @@ export default function StudentView() {
           bc.close();
         } catch (e) {}
         window.dispatchEvent(new CustomEvent('edutech_student_update'));
+
+        // Broadcast to backend so Admin Live Location Map gets real-time position across devices
+        const now = Date.now();
+        if (!lastLocationPingRef.current || now - lastLocationPingRef.current > 8000) {
+          lastLocationPingRef.current = now;
+          locations.update({
+            teamId: team?.id,
+            teamName: team?.team_name || team?.name,
+            checkpointId: currentCp?.id,
+            lat: userPos.lat,
+            lng: userPos.lng
+          }).catch(() => {});
+        }
       } catch (e) {}
     }
   }, [userPos, currentCp, team]);
@@ -342,6 +380,7 @@ function saveCompletionToHistory(entry) {
       try {
         const { data } = await completions.submit({
           teamId: team.id,
+          teamName: team.team_name || team.name,
           checkpointId: currentCp.id,
           timeTaken,
           answer: submissionData.note || answer,

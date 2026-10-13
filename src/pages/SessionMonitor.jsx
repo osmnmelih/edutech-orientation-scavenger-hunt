@@ -162,25 +162,27 @@ export default function SessionMonitor() {
   const fetchSession = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const { data } = await sessionsApi.getById(id);
+      const targetId = (!id || id === 'undefined' || id.startsWith('edutech_host')) ? '10' : id;
+      const { data } = await sessionsApi.getById(targetId);
       if (data) {
         setSession(data);
         setError('');
       }
     } catch (err) {
+      console.warn("fetchSession fallback:", err);
       const savedHistory = JSON.parse(localStorage.getItem('orienteering_teacher_sessions') || '[]');
       const currentSaved = savedHistory.find(s => s.id === id) || savedHistory[0];
 
       const localSessionData = {
-        id: id || 'edutech_host_local',
+        id: id || 10,
         name: currentSaved?.name || '2026-2027 Winter Semester MSc Educational Technology Orientation',
         join_code: currentSaved?.join_code || 'EDUTECH26',
         checkpoints: [
-          { id: 1, label: 'Innovation Center (Building A2 1)', lat: 49.25618, lng: 7.03956 },
-          { id: 2, label: 'DFKI - AI Research Center (Building D3 2)', lat: 49.25683, lng: 7.04208 },
-          { id: 3, label: 'Mensa Saarbrücken (Building D4 1)', lat: 49.25743, lng: 7.04326 },
+          { id: 24, order_num: 1, label: 'Innovation Center (Building A2 1)', lat: 49.25618, lng: 7.03956 },
+          { id: 25, order_num: 2, label: 'DFKI - AI Research Center (Building D3 2)', lat: 49.25683, lng: 7.04208 },
+          { id: 26, order_num: 3, label: 'Mensa Saarbrücken (Building D4 1)', lat: 49.25743, lng: 7.04326 },
         ],
-        teams: [] // Real-time only
+        teams: []
       };
       setSession(localSessionData);
       setError('');
@@ -232,22 +234,32 @@ export default function SessionMonitor() {
   }
 
   // Derive real active students/teams strictly from live session, active students registry and saved completions
-  const completionsList = savedPhotos;
   const mergedTeamsMap = new Map();
 
-  // 1. Backend session teams (if present)
+  // 1. Backend session teams from Supabase
   (session.teams || []).forEach(t => {
     const compCount = t.completions?.length || 0;
+    const isFinished = compCount >= 3;
+    const stationNum = Math.min(3, compCount + 1);
+    const cpObj = (session.checkpoints || []).find(c => c.order_num === stationNum) || session.checkpoints?.[0];
+
+    let lat = t.lat;
+    let lng = t.lng;
+    if (!lat || !lng) {
+      lat = cpObj ? cpObj.lat : 49.25618;
+      lng = cpObj ? cpObj.lng : 7.03956;
+    }
+
     mergedTeamsMap.set(t.id || t.name, {
       id: t.id || t.name,
-      name: t.name || 'Student Player',
-      routeOption: t.route_option || 'Option A',
-      currentLocation: t.current_location || (compCount > 0 ? `Station ${compCount}` : 'Campus Entrance'),
-      currentStation: Math.min(3, compCount + 1),
+      name: t.name || 'STUDENT PLAYER',
+      routeOption: t.route_option || (t.name?.includes('(B)') ? 'Option B' : 'Option A'),
+      currentLocation: isFinished ? 'Completed All Stations' : (cpObj ? cpObj.label : `Station ${stationNum}`),
+      currentStation: stationNum,
       completedCount: compCount,
-      stars: t.stars || compCount,
-      lat: t.lat || 49.255,
-      lng: t.lng || 7.042,
+      stars: compCount,
+      lat,
+      lng,
       completions: t.completions || []
     });
   });
@@ -278,8 +290,8 @@ export default function SessionMonitor() {
     }
   });
 
-  // 3. Completions & photos submitted
-  completionsList.forEach((c, idx) => {
+  // 3. Completions & photos from local storage
+  savedPhotos.forEach((c, idx) => {
     const key = c.teamId || c.teamName || `student_${idx}`;
     const existing = mergedTeamsMap.get(key);
     if (existing) {
@@ -309,6 +321,46 @@ export default function SessionMonitor() {
     }
   });
 
+  // Aggregate all submitted photos across backend Supabase teams and local storage
+  const allSubmittedPhotos = [...savedPhotos];
+  const photoKeys = new Set(savedPhotos.map(p => p.id || `${p.teamId}_${p.checkpointId}`));
+
+  (session.teams || []).forEach(team => {
+    (team.completions || []).forEach(comp => {
+      let photoSrc = null;
+      let noteText = comp.answer;
+
+      if (comp.answer && typeof comp.answer === 'string') {
+        if (comp.answer.startsWith('data:image')) {
+          photoSrc = comp.answer;
+          noteText = 'Station Verified via AR Camera Photo';
+        } else if (comp.answer.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(comp.answer);
+            if (parsed.photo) photoSrc = parsed.photo;
+            if (parsed.note) noteText = parsed.note;
+          } catch (e) {}
+        }
+      }
+
+      const key = `backend_${team.id}_${comp.id || comp.checkpoint_id}`;
+      if (!photoKeys.has(key)) {
+        photoKeys.add(key);
+        allSubmittedPhotos.push({
+          id: key,
+          teamId: team.id,
+          teamName: team.name,
+          checkpointId: comp.checkpoint_id || comp.order_num || 1,
+          checkpointLabel: comp.label || `Station ${comp.order_num || comp.checkpoint_id || 1}`,
+          photo: photoSrc,
+          answer: noteText || 'Station Verified',
+          score: comp.score || 100,
+          submittedAt: comp.completed_at
+        });
+      }
+    });
+  });
+
   const allTeamsList = Array.from(mergedTeamsMap.values());
   const leaderboardList = [...allTeamsList].sort((a, b) => b.stars - a.stars);
 
@@ -321,7 +373,7 @@ export default function SessionMonitor() {
     { id: 'overview',      label: 'OVERVIEW' },
     { id: 'status',        label: 'STATUS' },
     { id: 'live-location', label: 'LIVE LOCATION' },
-    { id: 'photos',        label: `SUBMITTED PHOTOS (${savedPhotos.length})` },
+    { id: 'photos',        label: `SUBMITTED PHOTOS (${allSubmittedPhotos.length})` },
   ];
 
   if (!isAdminAuth) {
@@ -639,9 +691,9 @@ export default function SessionMonitor() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-orbitron font-bold text-xs px-3 py-1.5 rounded bg-ag-gold/15 text-ag-gold border border-ag-gold/30">
-                  {savedPhotos.length} TOTAL PHOTOS
+                  {allSubmittedPhotos.length} TOTAL PHOTOS
                 </span>
-                {savedPhotos.length > 0 && (
+                {allSubmittedPhotos.length > 0 && (
                   <button
                     onClick={handleClearAllPhotos}
                     className="px-3.5 py-1.5 bg-ag-red/20 hover:bg-ag-red/35 border border-ag-red/50 text-ag-red font-orbitron text-xs font-bold rounded-xl tracking-wider transition-all"
@@ -652,7 +704,7 @@ export default function SessionMonitor() {
               </div>
             </div>
 
-            {savedPhotos.length === 0 ? (
+            {allSubmittedPhotos.length === 0 ? (
               <div className="ag-panel p-10 text-center space-y-3">
                 <div className="font-orbitron font-bold text-ag-cyan text-sm uppercase tracking-wider">
                   NO SUBMITTED PHOTOS YET
@@ -660,7 +712,7 @@ export default function SessionMonitor() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {savedPhotos.map((item, idx) => (
+                {allSubmittedPhotos.map((item, idx) => (
                   <div key={item.id || idx} className="cockpit-panel p-4 space-y-3 border border-ag-cyan/30 rounded-2xl bg-ag-surface/90 hover:border-ag-gold transition-all flex flex-col justify-between">
                     <div className="space-y-3">
                       {/* Student Sender Name Header */}

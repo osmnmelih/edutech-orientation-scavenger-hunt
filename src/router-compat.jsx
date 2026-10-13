@@ -31,7 +31,7 @@ export function useNavigate() {
 export function useParams() {
   const params = useTanStackParams({ strict: false });
   const pathname = useLocation({ select: (location) => location.pathname });
-  const sessionMatch = pathname.match(/^\/teacher\/session\/([^/?#]+)/);
+  const sessionMatch = pathname.match(/^\/(?:admin|teacher)\/session\/([^/?#]+)/);
 
   return {
     ...params,

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api', timeout: 1500 });
+const api = axios.create({ baseURL: '/api', timeout: 15000 });
 
 export const sessions = {
   create:    (name)              => api.post('/sessions', { name }),
@@ -34,4 +34,8 @@ export const completions = {
 
 export const reports = {
   generate:  (sessionId)         => api.get(`/report/${sessionId}`),
+};
+
+export const locations = {
+  update:    (data)              => api.post('/location', data),
 };

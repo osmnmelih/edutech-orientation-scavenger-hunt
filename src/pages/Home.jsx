@@ -92,13 +92,11 @@ export default function Home() {
       let teamData = null;
 
       try {
-        const joinPromise = sessions.join(joinCode.trim().toUpperCase(), combinedName);
-        const fastFallback = new Promise((_, reject) => setTimeout(() => reject(new Error('Fast local fallback')), 3500));
-        const { data } = await Promise.race([joinPromise, fastFallback]);
+        const { data } = await sessions.join(joinCode.trim().toUpperCase(), combinedName);
         sessionData = data.session;
         teamData = data.team;
       } catch (err) {
-        // Instant fallback for standalone orientation day play (creates local preset session)
+        // Fallback for standalone / offline orientation day play (creates local preset session)
         console.warn("Fast local EduTech preset session active:", err);
         const preset = SAARLAND_EDUTECH_PRESETS[selectedOption.toUpperCase()] || SAARLAND_EDUTECH_PRESETS.OPTION_A;
         sessionData = {

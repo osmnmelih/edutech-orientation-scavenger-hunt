@@ -29,16 +29,27 @@ export const Route = createFileRoute("/api/sessions/$code/join")({
           if (!checkpoints || checkpoints.length === 0)
             return Response.json({ error: "Session has no checkpoints yet" }, { status: 400 });
 
-          const { data: team, error } = await db
+          let { data: existingTeam } = await db
             .from("teams")
-            .insert({
-              session_id: session.id,
-              name: teamName,
-              current_checkpoint: checkpoints[0].id,
-            })
-            .select()
-            .single();
-          if (error) return Response.json({ error: error.message }, { status: 500 });
+            .select("*")
+            .eq("session_id", session.id)
+            .ilike("name", teamName)
+            .maybeSingle();
+
+          let team = existingTeam;
+          if (!team) {
+            const { data: newTeam, error } = await db
+              .from("teams")
+              .insert({
+                session_id: session.id,
+                name: teamName,
+                current_checkpoint: checkpoints[0]?.id || 1,
+              })
+              .select()
+              .single();
+            if (error) return Response.json({ error: error.message }, { status: 500 });
+            team = newTeam;
+          }
 
           return Response.json({ team, session: { ...session, checkpoints } });
         } catch (err) {
