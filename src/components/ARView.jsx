@@ -58,7 +58,7 @@ function getBuildingSecret(label) {
   return BUILDING_SECRETS.innovation;
 }
 
-export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlock, onClose, taskLoading, onCameraReady }) {
+export default function ARView({ userPos, currentCp, distance, canUnlock, onManualUnlock, onUnlock, onClose, taskLoading, onCameraReady }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -86,8 +86,13 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
 
   const handleTapARBeacon = () => {
     if (!canUnlock) {
-      triggerArToast(`LOCATION LOCK REQUIRED: Walk within 20m of ${currentCp?.label || 'the station'} to touch 3D Beacon.`);
-      return;
+      if (onManualUnlock) {
+        onManualUnlock();
+        triggerArToast('📍 LOCATION MANUALLY CONFIRMED!');
+      } else {
+        triggerArToast(`LOCATION LOCK REQUIRED: Walk closer to ${currentCp?.label || 'the station'}.`);
+        return;
+      }
     }
     try { playUnlockSound(); } catch (e) {}
     setShowSecretModal(true);
@@ -444,6 +449,27 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
         </div>
       )}
 
+      {/* Camera error fallback overlay */}
+      {cameraError && !capturedPhoto && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/90 backdrop-blur-md px-6">
+          <div className="cockpit-panel w-full max-w-sm p-6 text-center space-y-4 border-2 border-ag-yellow shadow-[0_0_30px_rgba(255,200,0,0.3)]">
+            <div className="text-4xl">📷</div>
+            <h3 className="font-orbitron font-black text-sm text-ag-yellow uppercase tracking-wider">
+              CAMERA ACCESS RESTRICTED
+            </h3>
+            <p className="font-mono-cyber text-[11px] text-ag-muted leading-relaxed">
+              Browser permissions restricted the live feed. You can take or choose a photo using your phone's native camera!
+            </p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="cockpit-btn w-full py-4 text-xs tracking-wider border-2 border-ag-green text-ag-green bg-ag-green/15 font-black shadow-[0_0_20px_rgba(0,255,136,0.4)]"
+            >
+              📸 TAKE PHOTO WITH PHONE CAMERA
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top HUD Header */}
       <div
         className="absolute top-0 left-0 right-0 px-4 pt-safe-top pb-6 flex items-start justify-center z-30"
@@ -485,28 +511,58 @@ export default function ARView({ userPos, currentCp, distance, canUnlock, onUnlo
         <div className="max-w-md mx-auto space-y-3">
           {!capturedPhoto ? (
             <>
-              <button
-                onClick={() => {
-                  if (!canUnlock) {
-                    triggerArToast(`LOCATION LOCK REQUIRED: Walk within 20m of ${currentCp?.label || 'the station'} to take photo.`);
-                    return;
-                  }
-                  handleTakePhotoFromStream();
-                }}
-                disabled={!canUnlock || taskLoading}
-                className={`cockpit-btn w-full px-8 py-4 text-xs sm:text-sm tracking-[0.25em] ${
-                  canUnlock
-                    ? 'shadow-[0_0_30px_rgba(0,255,136,0.5)] bg-gradient-to-r from-ag-green/20 via-ag-cyan/30 to-ag-green/20 border-ag-green text-ag-green font-black'
-                    : 'opacity-60 cursor-not-allowed border-ag-yellow text-ag-yellow bg-ag-bg/90 shadow-none'
-                }`}
-              >
-                {!canUnlock ? `LOCATION LOCK REQUIRED (${userPos ? fmtDistance(distance) : 'SEARCHING...'} / 20M)` : 'TAKE PHOTO'}
-              </button>
+              {/* Proximity Bypass / Manual Unlock */}
+              {!canUnlock && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onManualUnlock?.();
+                    triggerArToast('📍 LOCATION MANUALLY CONFIRMED & UNLOCKED!');
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl border border-ag-yellow/60 bg-ag-yellow/15 hover:bg-ag-yellow/25 text-ag-yellow font-orbitron font-bold text-[10px] tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(255,200,0,0.15)] active:scale-95"
+                >
+                  <span>📍 I'M AT THIS STATION (TAP TO UNLOCK)</span>
+                </button>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (!canUnlock) {
+                      if (onManualUnlock) {
+                        onManualUnlock();
+                        triggerArToast('📍 STATION UNLOCKED!');
+                      } else {
+                        triggerArToast(`LOCATION LOCK REQUIRED: Please walk closer or tap unlock.`);
+                        return;
+                      }
+                    }
+                    handleTakePhotoFromStream();
+                  }}
+                  disabled={taskLoading}
+                  className={`cockpit-btn flex-1 px-4 py-4 text-xs sm:text-sm tracking-[0.2em] ${
+                    canUnlock
+                      ? 'shadow-[0_0_30px_rgba(0,255,136,0.5)] bg-gradient-to-r from-ag-green/20 via-ag-cyan/30 to-ag-green/20 border-ag-green text-ag-green font-black'
+                      : 'border-ag-yellow text-ag-yellow bg-ag-bg/90 shadow-none'
+                  }`}
+                >
+                  {canUnlock ? 'TAKE PHOTO 📸' : 'UNLOCK & TAKE PHOTO 📸'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Upload from phone"
+                  className="cockpit-btn-secondary px-3 py-4 text-[10px] text-ag-cyan border-ag-cyan/50 bg-ag-surface/80 font-orbitron font-bold uppercase shrink-0"
+                >
+                  📁 UPLOAD
+                </button>
+              </div>
 
               <div className="flex justify-between items-center px-1 text-[10px] font-mono-cyber text-ag-muted">
                 <span>DISTANCE: {distance != null ? fmtDistance(distance) : 'SEARCHING...'}</span>
                 <span className={canUnlock ? 'text-ag-green font-bold' : 'text-ag-yellow font-bold'}>
-                  {canUnlock ? 'WITHIN 20M RANGE' : `WALK WITHIN ${UNLOCK_DISTANCE}M`}
+                  {canUnlock ? 'STATION UNLOCKED ✓' : `WITHIN ${UNLOCK_DISTANCE}M`}
                 </span>
               </div>
             </>

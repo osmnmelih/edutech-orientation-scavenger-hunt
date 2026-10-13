@@ -127,7 +127,8 @@ export default function Home() {
       }
 
       success();
-      const cps = sessionData.checkpoints || SAARLAND_EDUTECH_PRESETS[selectedOption.toUpperCase()].checkpoints;
+      const preset = SAARLAND_EDUTECH_PRESETS[selectedOption.toUpperCase()] || SAARLAND_EDUTECH_PRESETS.OPTION_A;
+      const cps = (selectedOption === 'option_b') ? preset.checkpoints : (sessionData.checkpoints || preset.checkpoints);
       const cp  = cps.find(c => c.id === teamData.current_checkpoint) || cps[0];
 
       localStorage.setItem('orienteering_student_session', JSON.stringify({

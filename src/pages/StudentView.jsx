@@ -73,6 +73,7 @@ export default function StudentView() {
   const [showAR, setShowAR] = useState(false);
   const [arInitializing, setArInitializing] = useState(false);
   const [focusTrigger, setFocusTrigger] = useState(null);
+  const [manualUnlocked, setManualUnlocked] = useState(false);
 
   const [studentToast, setStudentToast] = useState('');
   const triggerStudentToast = (msg) => {
@@ -371,6 +372,7 @@ function saveCompletionToHistory(entry) {
   function handleAdvance() {
     playClickSound();
     try { stopTenseMissionMusic(); startAmbientSpaceMusic(); } catch(e) {}
+    setManualUnlocked(false);
     if (!submitResult?.nextCheckpoint) return;
     const nextCp = checkpoints.find(cp => cp.id === submitResult.nextCheckpoint.id);
     setCurrentCp(nextCp);
@@ -381,7 +383,7 @@ function saveCompletionToHistory(entry) {
   }
 
   const cpIndex   = checkpoints.findIndex(cp => cp.id === currentCp?.id);
-  const canUnlock = distance !== null && distance <= UNLOCK_DISTANCE;
+  const canUnlock = manualUnlocked || (distance !== null && distance <= UNLOCK_DISTANCE);
   let taskType = currentCp?.task_type;
   if (taskType === 'auto' && currentCp) {
     const autoTypes = ['physical', 'cognitive', 'social', 'creative'];
@@ -411,6 +413,7 @@ function saveCompletionToHistory(entry) {
         currentCp={currentCp}
         distance={distance}
         canUnlock={canUnlock}
+        onManualUnlock={() => setManualUnlocked(true)}
         taskLoading={taskLoading}
         onClose={() => { setShowAR(false); setArInitializing(false); }}
         onUnlock={(photoPayload) => {
@@ -523,10 +526,25 @@ function saveCompletionToHistory(entry) {
                 <div className="shrink-0 text-right px-2.5 py-1 bg-ag-bg/80 border border-ag-border/50 rounded">
                   <span className="text-[8px] text-ag-muted font-mono-cyber uppercase block font-bold">DIST</span>
                   <span className={`font-orbitron font-black text-xs sm:text-sm ${canUnlock ? 'text-ag-green' : 'text-ag-yellow'}`}>
-                    {userPos ? fmtDistance(distance) : 'SEARCHING...'}
+                    {canUnlock ? 'REACHED ✓' : (userPos ? fmtDistance(distance) : 'SEARCHING...')}
                   </span>
                 </div>
               </div>
+
+              {/* Manual Station Unlock Fallback (for indoor / GPS jitter) */}
+              {!canUnlock && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    try { playUnlockSound(); } catch (e) {}
+                    setManualUnlocked(true);
+                    triggerStudentToast('📍 STATION MANUALLY VERIFIED & UNLOCKED!');
+                  }}
+                  className="w-full py-2 px-3 rounded-xl border border-ag-yellow/60 bg-ag-yellow/15 hover:bg-ag-yellow/25 text-ag-yellow font-orbitron font-bold text-[10px] tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(255,200,0,0.15)] active:scale-95"
+                >
+                  <span>📍 I'M AT THIS STATION (TAP TO UNLOCK)</span>
+                </button>
+              )}
 
               {/* Primary Action Button: AR CAMERA VIEW */}
               <button

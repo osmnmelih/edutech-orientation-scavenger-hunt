@@ -59,7 +59,7 @@ export const MARKER_COLOR = {
   creative:  '#7A5CFF',
 };
 
-export const UNLOCK_DISTANCE = 20; // metres
+export const UNLOCK_DISTANCE = 65; // metres (increased from 20 to 65 for reliable campus GPS accuracy)
 
 // Saarland University (Saarbrücken Campus) Preset Locations for EduTech Orientation Scavenger Hunt
 export const SAARLAND_EDUTECH_PRESETS = {
