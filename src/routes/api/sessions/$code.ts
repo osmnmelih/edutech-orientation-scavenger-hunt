@@ -7,12 +7,18 @@ export const Route = createFileRoute("/api/sessions/$code")({
     handlers: {
       GET: async ({ params }) => {
         const code = params.code.toUpperCase();
-        const { data: session } = await db
+        const { data: session, error: sessionErr } = await db
           .from("sessions")
           .select("*")
           .eq("join_code", code)
           .maybeSingle();
-        if (!session) return Response.json({ error: "Session not found" }, { status: 404 });
+        if (!session) {
+          return Response.json({
+            error: "Session not found",
+            codeQueried: code,
+            sessionErr: sessionErr?.message || sessionErr,
+          }, { status: 404 });
+        }
 
         const { data: checkpoints } = await db
           .from("checkpoints")
