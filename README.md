@@ -1,7 +1,7 @@
-# 📍 UdS EduTech Campus Orientation: GPS Scavenger Hunt
+# 📍 Campus Orientation: GPS Scavenger Hunt
 
 [![React 18](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
-[![Live Application](https://img.shields.io/badge/Live_App-Vercel-black?style=flat&logo=vercel)](https://edutech-orientation-scavenger-hunt.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-black?style=flat&logo=vercel)](https://edutech-orientation-scavenger-hunt.vercel.app)
 [![TanStack Start](https://img.shields.io/badge/TanStack-Start%20%26%20Router-FF4154?style=flat)](https://tanstack.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Leaflet](https://img.shields.io/badge/Leaflet-GPS%20Mapping-199900?style=flat&logo=leaflet&logoColor=white)](https://leafletjs.com/)
@@ -10,7 +10,17 @@
 
 > An interactive, full-stack, GPS-guided campus exploration and onboarding web platform engineered specifically for the official **M.Sc. Educational Technology Orientation Day** at **Universität des Saarlandes (Saarbrücken Campus)**.
 > 
-> 🔗 **Live Application:** [edutech-orientation-scavenger-hunt.vercel.app](https://edutech-orientation-scavenger-hunt.vercel.app)
+> 🔗 **Live Demo:** [edutech-orientation-scavenger-hunt.vercel.app](https://edutech-orientation-scavenger-hunt.vercel.app)
+
+---
+
+## 📸 Application Screenshots
+
+<div align="center">
+  <img src="screenshots/mobile_view.png" width="280" alt="Student Mobile Interface" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/admin_dashboard.png" width="540" alt="Mission Control Admin Dashboard" />
+</div>
 
 ---
 
