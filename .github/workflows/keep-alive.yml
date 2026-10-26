@@ -1,0 +1,28 @@
+name: Keep Alive Supabase & Live App
+
+on:
+  schedule:
+    # Runs every 2 days at 04:00 UTC (prevents Supabase 7-day inactivity pause)
+    - cron: '0 4 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    name: Ping Services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database API
+        run: |
+          echo "Pinging Supabase REST API..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2b2Nvc2NzaW9lemZ5bHp4YndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5Mzk1NjMsImV4cCI6MjA5ODUxNTU2M30.OrDW6bAaHecadIfjpvijbIfjZG4Ky6sywa3yTJALoBE" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2b2Nvc2NzaW9lemZ5bHp4YndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5Mzk1NjMsImV4cCI6MjA5ODUxNTU2M30.OrDW6bAaHecadIfjpvijbIfjZG4Ky6sywa3yTJALoBE" \
+            "https://kvocoscsioezfylzxbwf.supabase.co/rest/v1/checkpoints?select=id&limit=1")
+          echo "Supabase response code: $HTTP_STATUS"
+
+      - name: Ping Live Web Deployments
+        run: |
+          echo "Pinging EduTech Scavenger Hunt..."
+          curl -s -o /dev/null -w "EduTech Hunt HTTP status: %{http_code}\n" "https://edutech-orientation-scavenger-hunt.vercel.app"
+          echo "Pinging Antigravity 2.0..."
+          curl -s -o /dev/null -w "Antigravity 2.0 HTTP status: %{http_code}\n" "https://antigravity-2-0-seven.vercel.app"
