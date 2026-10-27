@@ -11,14 +11,23 @@ jobs:
     name: Ping Services
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase Database API
+      - name: Ping Supabase Project 1 (kvocoscsioezfylzxbwf)
         run: |
-          echo "Pinging Supabase REST API..."
+          echo "Pinging Supabase Project 1 (kvocoscsioezfylzxbwf)..."
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2b2Nvc2NzaW9lemZ5bHp4YndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5Mzk1NjMsImV4cCI6MjA5ODUxNTU2M30.OrDW6bAaHecadIfjpvijbIfjZG4Ky6sywa3yTJALoBE" \
             -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2b2Nvc2NzaW9lemZ5bHp4YndmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5Mzk1NjMsImV4cCI6MjA5ODUxNTU2M30.OrDW6bAaHecadIfjpvijbIfjZG4Ky6sywa3yTJALoBE" \
-            "https://kvocoscsioezfylzxbwf.supabase.co/rest/v1/checkpoints?select=id&limit=1")
-          echo "Supabase response code: $HTTP_STATUS"
+            "https://kvocoscsioezfylzxbwf.supabase.co/rest/v1/sessions?select=id&limit=1")
+          echo "Supabase Project 1 response code: $HTTP_STATUS"
+
+      - name: Ping Supabase Project 2 (vciqbrjzavwhzapusqpy)
+        run: |
+          echo "Pinging Supabase Project 2 (vciqbrjzavwhzapusqpy)..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjaXFicmp6YXZ3aHphcHVzcXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNTQ5NzQsImV4cCI6MjEwNDYzMDk3NH0.40cIfV4-Vw1-CxL9Ji_Nr98VUfyROr6bzKwUsmaTO_0" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjaXFicmp6YXZ3aHphcHVzcXB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNTQ5NzQsImV4cCI6MjEwNDYzMDk3NH0.40cIfV4-Vw1-CxL9Ji_Nr98VUfyROr6bzKwUsmaTO_0" \
+            "https://vciqbrjzavwhzapusqpy.supabase.co/storage/v1/bucket")
+          echo "Supabase Project 2 response code: $HTTP_STATUS"
 
       - name: Ping Live Web Deployments
         run: |
